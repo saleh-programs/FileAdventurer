@@ -1,0 +1,122 @@
+.sidebar{
+  border: 1px solid white;
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  right: 73%;
+  padding: 10px;
+}
+.searchResults{
+  height: 500px;
+  font-size: .8rem;
+  background-color: rgb(244, 231, 209);
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.minitree{
+  height: 500px;
+  background-color: rgb(244, 231, 209);
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.search{
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+.search button{ font-size: .7rem;}
+.search input{
+  width: 150px;
+  opacity: .7;
+  padding: 2px;
+}
+.search input:hover{
+  opacity: 1;
+}
+.commonFolders{
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.commonFolders section{
+  border: 1px solid;
+  padding: 4px;
+  font-size: 1.2rem;
+  text-align: center;
+  background-color: rgb(244, 231, 209);
+}
+.commonFolders section:hover{
+  cursor: pointer;
+  color: white;
+  background-color: rgba(57, 75, 238, 0.486);
+}
+.parentDir{
+  border: 1px solid;
+  padding: 5px;
+  font-size: .8rem;
+  background-color: rgb(17, 14, 1);
+  color: white;
+  opacity: .6;
+}
+.parentDir:hover{
+    background-color: rgb(35, 71, 71);
+    cursor: pointer;
+}
+.file, .folder{
+  border: 1px solid;
+  padding: 5px;
+  font-size: .8rem;
+}
+.file:hover, .folder:hover{
+  background-color: rgb(91, 158, 158);
+  color: white;
+  cursor: pointer;
+}
+.file_folder_bg{
+}
+.folder{
+  background-color: rgb(221, 199, 101);
+  display: flex;
+  justify-content:  space-between;
+}
+.file{
+  background-color: rgb(208, 233, 199);
+}
+.pinnedSection{
+  background-color: rgb(244, 231, 209);
+  border: 1px solid;
+  height: 200px;
+  overflow-y: auto;
+  
+}
+.pinnedHeader{
+  background-color: rgb(244, 231, 209);
+  position: sticky;
+  top: 0px;
+  text-align: center;
+  margin: 0px;
+  
+}
+.pinnedEntries{
+  display: inline-block;
+  border: 1px solid;
+  border-radius: 10px;
+  margin: 2px;
+  padding: 10px;
+  color: rgb(0, 0, 0);
+  font-size: 1.3rem;
+  background-color: #f5c1c1;
+}
+.pinnedEntries:hover{
+  cursor: pointer;
+  background-color: white;
+  transform: scale(1.03);
+}
