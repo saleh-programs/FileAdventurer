@@ -16,10 +16,21 @@ function Sidebar(){
   const [isSearching, setIsSearching] = useState(false)
   const [searchTarget, setSearchTarget] = useState("")
   const [loading,setIsLoading] = useState(false)
+  const [refresh, setRefresh] = useState(false)
+  const [defaultMode, setDefaultMode] = useState(true)
 
   async function retrieveFiles() {
     const response = await navigateTo(treePath);
     setTreeFiles(response);
+  }
+  async function addChildren(item) {
+    if (item.children.length > 0){
+      item.children = []
+    }else{
+      const response = await navigateTo(item.path);
+      item.children = response
+    }
+    setRefresh(!refresh)
   }
   function callOpenFile(e) {
     openFile(joinPath(treePath,e.currentTarget.firstElementChild.textContent))
@@ -33,6 +44,24 @@ function Sidebar(){
     const data = await getRecents()
     setRecents(data)
     setShowRecents(true)
+  }
+  function renderFiles(each, depth=0){
+    return <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:`${depth*10}px`}}>
+          {
+          each.type == "folder" 
+          ? 
+          <div onClick={(e)=>{e.target.tagName !== "BUTTON" ? addChildren(each):null}} className={styles.folder}>
+            <section className={styles.dirName}>{each.name}</section>
+            <button onClick={()=>setDisplayPath(each.path)}>Go</button>
+          </div> 
+          :
+          <div onClick={callOpenFile} className={styles.file}>
+            <section  className={styles.dirName}>{each.name}</section>
+          </div>
+          }
+          {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
+          </div>
+          
   }
 
   useEffect(()=>{
@@ -60,7 +89,18 @@ function Sidebar(){
       :
       <div className={styles.minitree}>
         <section>Inside {treePath}</section>
-        {parents.map((each,i)=>{
+        <button onClick={()=>setDefaultMode(true)}>Tree Mode</button>
+        <button onClick={()=>setDefaultMode(false)}>Linear Mode</button>
+        {defaultMode
+        ?
+        <section>
+          {
+            treeFiles.map(each => {return renderFiles(each)})
+          }
+        </section>
+        :
+        <section>
+          {parents.map((each,i)=>{
           return <div key={i} className={styles.parentDir} onClick={()=>setTreePath(trimPath(treePath, each))} style={{marginLeft:`${i*10}px`}}>
             {each}
           </div>
@@ -77,6 +117,9 @@ function Sidebar(){
           </div>}
           </div>
         })}
+        </section>
+        }
+        
       </div>
       }
       <div className={styles.commonFolders}>

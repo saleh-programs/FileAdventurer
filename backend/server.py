@@ -174,7 +174,9 @@ def navigate(req: JustPath):
         "type": "folder" if os.path.isdir(entry_path) else "file",
         "creation": fileinfo.st_ctime,
         "pinned": isPinned,
-        "hidden": isHidden
+        "hidden": isHidden,
+        "path": entry_path,
+        "children": []
         })
     
   return JSONResponse(
