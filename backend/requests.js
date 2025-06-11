@@ -1,145 +1,306 @@
 
 const baseURL = "http://localhost:8000/"
 
-
+//Save pinned entry in backend
 async function addPinned(path) {
-  const response = await fetch(baseURL + "addPinned",{
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({"path":path})
-  });
+  try{
+    const response = await fetch(baseURL + "addPinned",{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null
+  }
 }
+
+//Save hidden entry in backend
 async function addHidden(path) {
-  const response = await fetch(baseURL + "addHidden",{
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({"path":path})
-  });
+  try{
+    const response = await fetch(baseURL + "addHidden",{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({"path":path})
+    }); 
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  } catch(err){
+      console.error(err)
+      return null
+  }
 }
+
+//Remove pinned entry from backend
 async function removePinned(path) {
-  const response = await fetch(baseURL + "removePinned",{
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({"path":path})
-  });
+  try{
+    const response = await fetch(baseURL + "removePinned",{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  } catch(err){
+      console.error(err)
+      return null
+  }
 }
+
+//Remove hidden entry from backend
 async function removeHidden(path) {
-  const response = await fetch(baseURL + "removeHidden",{
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({"path":path})
-  });
+  try{
+    const response = await fetch(baseURL + "removeHidden",{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err);
+    return null
+  }
 }
+
+//Retrieve pinned entries from backend
 async function getPinned() {
-  const response = await fetch(baseURL + "getPinned",{
-    method: "GET",
-  });
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "getPinned",{
+      method: "GET",
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err);
+    return null
+  }
 }
+
+//Retrieve hidden entries from backend
 async function getHidden() {
-  const response = await fetch(baseURL + "getHidden",{
-    method: "GET",
-  });
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "getHidden",{
+      method: "GET",
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err);
+    return null
+  }
 }
 
+//Save new recently accessed path to backend 
 async function updateRecents(path) {
+  try{
     const response = await fetch(baseURL + "updateRecents",{
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({"path":path})
-  });
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err);
+    return null
+  }
 }
+
+//Retrieve recently accessed paths from backend in order of most to least frequently accessed
 async function getRecents() {
+  try{
     const response = await fetch(baseURL + "getRecents",{
-    method: "GET",
-  });
-  return await response.json()
+      method: "GET",
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null
+  }
 }
 
-
-
-
-// navigate to different directory
+// Retrieve files / folders from a specified path, excluding undesirables
 async function navigateTo(path){
-  const response = await fetch(baseURL + "navigate",{
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({"path":path})
-  });
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "navigate",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null
+  }
 }
 
 // open a file
 async function openFile(path){
-  const response = await fetch(baseURL + "open",{
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({"path":path})
-  });
+  try{
+    const response = await fetch(baseURL + "open",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
 
 // rename a file or directory
 async function renameFile(path,target){
-  if (path[path.length-1] === "\\")
-    path = path.slice(0,-1)
-    console.log(path)
-  const response = await fetch(baseURL + "rename",{
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({"path":path, "target":target})
-  });
+  try{
+    const response = await fetch(baseURL + "rename",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path, "target":target})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
 
-// moves file in path1 to directory in path2
+// moves entry in path1 to directory in path2
 async function moveFile(path1, path2) {
+  try{
     const response = await fetch(baseURL + "move",{
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({"path1":path1, "path2":path2})
-  });
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path1":path1, "path2":path2})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
-// get downloads folder (in case user renames downloads or something)
+
+// get system Downloads folder (in case user renames downloads or something)
 async function getDownloadsFolder(){
-  const response = await fetch(baseURL + "getDownloadsFolder",{
-    method: 'GET',
-  });
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "getDownloadsFolder",{
+      method: 'GET',
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
-// get documents folder (in case user renames documents or something)
+
+// get system Documents folder (in case user renames documents or something)
 async function getDocumentsFolder(){
-  const response = await fetch(baseURL + "getDocumentsFolder",{
-    method: 'GET',
-  });
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "getDocumentsFolder",{
+      method: 'GET',
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
 
-// just gets search results 
+// Gets a list of paths with the matching target substring
 async function getSearchResults(path, target) {
-  const response = await fetch(baseURL + "getSearchResults",{
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({path:path, target:target})
-  })
-  return await response.json()
+  try{
+    const response = await fetch(baseURL + "getSearchResults",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path:path, target:target})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
 }
 
-function joinPath(fullpath, added){    
-  if (fullpath === "C:\\" && added === "..")
+// Acts as os.path.join to add to a path
+function joinPath(fullpath, added){   
+  if (fullpath === "C:\\" && added === ".."){
     return fullpath
-  
-  let newPath = fullpath.split("\\").slice(0,-1)
-  added === ".." ? newPath.pop() : newPath.push(added)
+  }else if (fullpath === "C:\\"){
+    return fullpath + added
+  }
 
-  return newPath.join("\\") + "\\"
+  let newPath = fullpath.split("\\")
+  added === ".." ? newPath.pop() : newPath.push(added)
+  if (newPath.length == 1){
+    return "C:\\"
+  }
+
+  return newPath.join("\\")
 }
-function trimPath(fullpath, parent){
-  console.log(fullpath,parent)
-  let newPath = fullpath.split("\\").slice(0,-1)
-  newPath = newPath.slice(0,newPath.indexOf(parent))
-  newPath = newPath.join("\\") + "\\"
-  console.log(newPath)
-  return newPath
+
+// trims path to be the parent path of target ("C:\\Users\\Downloads", "Users") => "C:\\" 
+function trimPath(fullpath, target){
+  let newPath = fullpath.split("\\")
+  newPath = newPath.slice(0,newPath.indexOf(target))
+  if (newPath.length == 1){
+    return "C:\\"
+  }
+  return newPath.join("\\")
 }
 
 export {
