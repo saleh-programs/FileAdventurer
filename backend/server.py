@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS recents(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL)
 ''')
+# cursor.execute("DROP TABLE recents")
 conn.close()
 
 app = FastAPI()
@@ -93,14 +94,24 @@ def getRecents():
       for each in cursor.fetchall():
         recents[each[1]] = 1 + recents.get(each[1],0)
 
-    sortedRecentFiles = []
-    for each in sorted(recents.items(),key=lambda item: item[1], reverse=True):
-      fileinfo =  os.lstat(each[0])
-      sortedRecentFiles.append(
-        {"name": "\\".join(each[0].split("\\")[:-1]),
-          "type": "folder" if os.path.isdir(each[0]) else "file",
-          "creation": fileinfo.st_ctime,
-          "path": each[0]})
+      sortedRecentFiles = []
+      for each in sorted(recents.items(),key=lambda item: item[1], reverse=True):
+        fileinfo =  os.lstat(each[0])
+
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(each[0],"pin"))
+        isPinned = cursor.fetchone() is not None
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(each[0],"hide"))
+        isHidden = cursor.fetchone() is not None
+      
+        sortedRecentFiles.append({
+            "name": "\\".join(each[0].split("\\")[:-1]),
+            "type": "folder" if os.path.isdir(each[0]) else "file",
+            "creation": fileinfo.st_ctime,
+            "pinned": isPinned,
+            "hidden": isHidden,
+            "path": each[0],
+            "children": []
+        })
       
     return JSONResponse(
       content={"data":sortedRecentFiles, "success":True},
@@ -156,7 +167,24 @@ def getPinned():
     with AccessDB("FileSystemDatabase.db") as conn:
       cursor = conn.cursor()
       cursor.execute('''SELECT name FROM preferences WHERE type = ?''', ("pin",))
-      pinnedEntries = [entry[0] for entry in cursor.fetchall()]
+
+      pinnedEntries = []
+      for each in cursor.fetchall():
+        fileinfo = os.lstat(each[0])
+
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(each[0],"hide"))
+        isHidden = cursor.fetchone() is not None
+
+        pinnedEntries.append({
+            "name": "\\".join(each[0].split("\\")[:-1]),
+            "type": "folder" if os.path.isdir(each[0]) else "file",
+            "creation": fileinfo.st_ctime,
+            "pinned": True,
+            "hidden": isHidden,
+            "path": each[0],
+            "children": []
+        })
+    
     return JSONResponse(
       content={"data":pinnedEntries,"success":True},
       status_code=200
@@ -212,7 +240,22 @@ def getHidden():
     with AccessDB("FileSystemDatabase.db") as conn:
       cursor = conn.cursor()
       cursor.execute('''SELECT name FROM preferences WHERE type = ?''', ("hide",))
-      hiddenEntries = [entry[0] for entry in cursor.fetchall()]
+      hiddenEntries = []
+      for each in cursor.fetchall():
+        fileinfo = os.lstat(each[0])
+
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(each[0],"pin"))
+        isPinned = cursor.fetchone() is not None
+
+        hiddenEntries.append({
+            "name": "\\".join(each[0].split("\\")[:-1]),
+            "type": "folder" if os.path.isdir(each[0]) else "file",
+            "creation": fileinfo.st_ctime,
+            "pinned": isPinned,
+            "hidden": True,
+            "path": each[0],
+            "children": []
+        })
     return JSONResponse(
       content={"data":hiddenEntries, "success": True},
       status_code=200
@@ -236,7 +279,7 @@ def navigate(req: JustPath):
         attributes = fileinfo.st_file_attributes
         if attributes & (stat.FILE_ATTRIBUTE_HIDDEN | stat.FILE_ATTRIBUTE_SYSTEM | stat.FILE_ATTRIBUTE_REPARSE_POINT):
           continue
-        entry_path = os.path.join(req.path, name) + "\\"
+        entry_path = os.path.join(req.path, name)
         cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(entry_path,"pin"))
         isPinned = cursor.fetchone() is not None
         cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(entry_path,"hide"))
