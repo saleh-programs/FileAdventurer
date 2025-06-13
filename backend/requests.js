@@ -2,7 +2,7 @@
 const baseURL = "http://localhost:8000/"
 
 //Save pinned entry in backend
-async function addPinned(path) {
+async function addPinnedReq(path) {
   try{
     const response = await fetch(baseURL + "addPinned",{
       method: "POST",
@@ -21,7 +21,7 @@ async function addPinned(path) {
 }
 
 //Save hidden entry in backend
-async function addHidden(path) {
+async function addHiddenReq(path) {
   try{
     const response = await fetch(baseURL + "addHidden",{
       method: "POST",
@@ -40,7 +40,7 @@ async function addHidden(path) {
 }
 
 //Remove pinned entry from backend
-async function removePinned(path) {
+async function removePinnedReq(path) {
   try{
     const response = await fetch(baseURL + "removePinned",{
       method: "POST",
@@ -59,7 +59,7 @@ async function removePinned(path) {
 }
 
 //Remove hidden entry from backend
-async function removeHidden(path) {
+async function removeHiddenReq(path) {
   try{
     const response = await fetch(baseURL + "removeHidden",{
       method: "POST",
@@ -78,7 +78,7 @@ async function removeHidden(path) {
 }
 
 //Retrieve pinned entries from backend
-async function getPinned() {
+async function getPinnedReq() {
   try{
     const response = await fetch(baseURL + "getPinned",{
       method: "GET",
@@ -95,7 +95,7 @@ async function getPinned() {
 }
 
 //Retrieve hidden entries from backend
-async function getHidden() {
+async function getHiddenReq() {
   try{
     const response = await fetch(baseURL + "getHidden",{
       method: "GET",
@@ -112,7 +112,7 @@ async function getHidden() {
 }
 
 //Save new recently accessed path to backend 
-async function updateRecents(path) {
+async function updateRecentsReq(path) {
   try{
     const response = await fetch(baseURL + "updateRecents",{
       method: "POST",
@@ -131,7 +131,7 @@ async function updateRecents(path) {
 }
 
 //Retrieve recently accessed paths from backend in order of most to least frequently accessed
-async function getRecents() {
+async function getRecentsReq() {
   try{
     const response = await fetch(baseURL + "getRecents",{
       method: "GET",
@@ -148,7 +148,8 @@ async function getRecents() {
 }
 
 // Retrieve files / folders from a specified path, excluding undesirables
-async function navigateTo(path){
+async function navigateToReq(path){
+  console.log(path)
   try{
     const response = await fetch(baseURL + "navigate",{
       method: 'POST',
@@ -167,7 +168,7 @@ async function navigateTo(path){
 }
 
 // open a file
-async function openFile(path){
+async function openFileReq(path){
   try{
     const response = await fetch(baseURL + "open",{
       method: 'POST',
@@ -186,7 +187,7 @@ async function openFile(path){
 }
 
 // rename a file or directory
-async function renameFile(path,target){
+async function renameFileReq(path,target){
   try{
     const response = await fetch(baseURL + "rename",{
       method: 'POST',
@@ -205,7 +206,7 @@ async function renameFile(path,target){
 }
 
 // moves entry in path1 to directory in path2
-async function moveFile(path1, path2) {
+async function moveFileReq(path1, path2) {
   try{
     const response = await fetch(baseURL + "move",{
       method: 'POST',
@@ -224,7 +225,7 @@ async function moveFile(path1, path2) {
 }
 
 // get system Downloads folder (in case user renames downloads or something)
-async function getDownloadsFolder(){
+async function getDownloadsFolderReq(){
   try{
     const response = await fetch(baseURL + "getDownloadsFolder",{
       method: 'GET',
@@ -241,7 +242,7 @@ async function getDownloadsFolder(){
 }
 
 // get system Documents folder (in case user renames documents or something)
-async function getDocumentsFolder(){
+async function getDocumentsFolderReq(){
   try{
     const response = await fetch(baseURL + "getDocumentsFolder",{
       method: 'GET',
@@ -258,7 +259,7 @@ async function getDocumentsFolder(){
 }
 
 // Gets a list of paths with the matching target substring
-async function getSearchResults(path, target) {
+async function getSearchResultsReq(path, target) {
   try{
     const response = await fetch(baseURL + "getSearchResults",{
       method: 'POST',
@@ -275,6 +276,8 @@ async function getSearchResults(path, target) {
     return null;
   }
 }
+
+// utility functions
 
 // Acts as os.path.join to add to a path
 function joinPath(fullpath, added){   
@@ -305,5 +308,5 @@ function trimPath(fullpath, target){
 
 export {
   joinPath, trimPath,
-  navigateTo, openFile,renameFile, moveFile, getDownloadsFolder,getDocumentsFolder, getSearchResults,
-  addPinned, addHidden, removePinned, removeHidden, getPinned, getHidden, updateRecents, getRecents }
+  navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
+  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq }
