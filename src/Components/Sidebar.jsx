@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Sidebar.module.css"
 import {
-  joinPath, trimPath,
+  joinPath, trimPath, getSegments,
   navigateToReq, openFileReq,renameFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
   addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, 
   getRecentsReq} from "../../backend/requests";
@@ -12,21 +12,23 @@ import stackIcon from "../assets/stackIcon.png"
 import sidebarHandle from "../assets/sidebarHandle.png"
 
 function Sidebar(){
-  const [displayPath, setDisplayPath, pinnedFolders, setPinnedFolders, showRecents, setShowRecents, recents, setRecents, draggedOver, setDraggedOver] = useContext(ThemeContext)
-  const [treeFiles, setTreeFiles] = useState([])
-  const [treePath, setTreePath] = useState("C:\\Users\\Saleh\\")
-  const [parents, setParents] = useState([])
+  const {setRecents, setShowRecents, changePath, openFile, pinnedFolders, setPinnedFolders} = useContext(ThemeContext)
+
+  const [stackFiles, setStackFiles] = useState([])
+  const [stackPath, setStackPath] = useState("C:\\Users\\Saleh\\")
+  const [stackParents, setStackParents] = useState([])
+  const [isLoadingStack, setIsLoadingStack] = useState(false)
+  const isLoadingStackRef = useRef(false)
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchTarget, setSearchTarget] = useState("")
-  const [loading,setIsLoading] = useState(false)
   const [refresh, setRefresh] = useState(false)
   const [defaultMode, setDefaultMode] = useState(true)
   const sidebarWidthRef = useRef(null)
 
-  
   useEffect(()=>{
     getPinnedItems()
+    changeStackPath(stackPath)
   },[])
 
 
@@ -38,58 +40,65 @@ function Sidebar(){
     }
   }
 
-  //gets files/folders in current "treePath"
-  async function retrieveFiles() {
-    const response = await navigateToReq(treePath);
-    if (response != null){
-      setTreeFiles(response); 
-    }
-  }
-
-  //
+  // Get all entries in folder and add those entries as children of that folder
   async function addChildren(item) {
     if (item.children.length > 0){
       item.children = []
     }else{
       const response = await navigateToReq(item.path);
-      item.children = response
+      if (response != null){
+        item.children = response
+      }
     }
     setRefresh(!refresh)
   }
 
-  function callOpenFile(e) {
-    openFile(joinPath(treePath,e.currentTarget.firstElementChild.textContent))
-  }
+  // Show search screen and get list of file/folder objects with matching target substring
   async function searchForItem() {
-    setIsSearching(true)
-    const response = await getSearchResultsReq(treePath, searchTarget)
-    setSearchResults(response)
+    setIsSearching(true) 
+    const response = await getSearchResultsReq(stackPath, searchTarget)
+    if (response != null){
+      setSearchResults(response)
+    }
   }
+
+  // Show recents screen and get list of file/folders objects that are most frequently accessed
   async function viewRecents() {
-    const data = await getRecentsReq()
-    setRecents(data)
+    const response = await getRecentsReq()
+    if (response != null){
+      setRecents(data)
+    }
     setShowRecents(true)
   }
+
+  function clickEntry(){
+
+  }
+
   function renderFiles(each, depth=0){
-    return <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:`${depth*10}px`}}>
-          {
-          each.type == "folder" 
-          ? 
-          <div onClick={(e)=>{e.target.tagName !== "BUTTON" ? addChildren(each):null}} className={styles.folder}data-folder={each.path}>
-            <section title={each.name} className={styles.dirName}>{each.name}</section>
-            <button className={styles.openDir} onClick={()=>setDisplayPath(each.path)}>Open</button>
-          </div> 
-          :
-          <div onClick={callOpenFile} className={styles.file}>
-            <section title={each.name} className={styles.dirName}>{each.name}</section>
-          </div>
-          }
-          {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
-          </div>
+    return (
+      <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:`${depth*10}px`}}>
+        {
+        each.type == "folder" 
+        ? 
+        <div
+        onClick={()=>{addChildren(each)}}
+        className={styles.folder}
+        data-folder data-path={each.path}>
+          <section title={each.name} className={styles.dirName}>{each.name}</section>
+          <button className={styles.openDir} onClick={()=>changePath(each.path)}>Open</button>
+        </div> 
+        :
+        <div onClick={openFile} className={styles.file}>
+          <section title={each.name} className={styles.dirName}>{each.name}</section>
+        </div>
+        }
+        {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
+      </div>
+    )
           
   }
   function dragSidebar(){
-
     let done = false;
     let startedDragging = false
     const rightBoundary = 800
@@ -139,13 +148,25 @@ function Sidebar(){
     document.addEventListener("mouseup",dragStop)
   }
 
-  useEffect(()=>{
-    async function getNewFiles() {
-      await retrieveFiles()
-      setParents(treePath.split("\\").slice(1,-1))
+  async function changeStackPath(newPath){
+    if (isLoadingStackRef.current || isLoadingStack) return
+
+    setIsLoadingStack(true)
+    isLoadingStackRef.current = true
+
+    const response = await navigateToReq(newPath)
+    if (response != null){
+      setStackPath(newPath)
+      setStackFiles(response)
+
+      const parents = getSegments(newPath).slice(0,-1)
+      setStackParents(parents)
     }
-    getNewFiles()
-  },[treePath])
+
+    setIsLoadingStack(false)
+    isLoadingStackRef.current = false
+  }
+
   return(
     <div className={styles.sidebarWrapper}>
       <div ref={sidebarWidthRef} className={styles.sidebar}>
@@ -165,7 +186,7 @@ function Sidebar(){
         :
         <div className={styles.minitree}  data-scrollable>
           <div className={styles.treeHeader}>
-            <section className={styles.path}>Inside {treePath}</section>
+            <section className={styles.path}>Inside {stackPath}</section>
             <section className={styles.modes}>
               <button className={styles.treeMode} onClick={()=>setDefaultMode(true)}>
                 <img src={treeIcon} />
@@ -181,22 +202,22 @@ function Sidebar(){
           ?
           <section>
             {
-              treeFiles.map(each => {return renderFiles(each)})
+              stackFiles.map(each => {return renderFiles(each)})
             }
           </section>
           :
           <section>
-            {parents.map((each,i)=>{
-            return <div key={i} className={styles.parentDir} onClick={()=>setTreePath(trimPath(treePath, each))} style={{marginLeft:`${i*10}px`}}>
+            {stackParents.map((each,i)=>{
+            return <div key={i} className={styles.parentDir} onClick={()=>changeStackPath(trimPath(stackPath, each))} style={{marginLeft:`${i*10}px`}}>
               {each}
             </div>
           })}
-          {treeFiles.map((each,i)=>{
-            return <div key={i} className={styles.file_folder_bg} style={{marginLeft:`${(parents.length)*10}px`}}>
+          {stackFiles.map((each,i)=>{
+            return <div key={i} className={styles.file_folder_bg} style={{marginLeft:`${(stackParents.length)*10}px`}}>
             {each.type == "folder" ? 
-            <div onClick={(e)=>{e.target.tagName !== "BUTTON" ?setTreePath(joinPath(treePath,each.name)):null}} className={styles.folder}>
+            <div onClick={()=>{changeStackPath(each.path)}} className={styles.folder}>
               <section title={each.name} className={styles.dirName}>{each.name}</section>
-              <button className={styles.openDir} onClick={()=>setDisplayPath(joinPath(treePath,each.name))}>Open</button>
+              <button className={styles.openDir} onClick={()=>changeStackPath(each.path)}>Open</button>
             </div> :
             <div onClick={callOpenFile} className={styles.file}>
               <section title={each.name}  className={styles.dirName}>{each.name}</section>

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
+
 import {
   joinPath, trimPath,
   navigateToReq, openFileReq,renameFileReq,moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
@@ -17,14 +18,11 @@ import fileIcon from "../assets/fileIcon.png"
 
 
 function Filedisplay(){
-  const [displayPath, setDisplayPath, pinnedFolders, setPinnedFolders, showRecents, setShowRecents, recents, setRecents, draggedOver, setDraggedOver] = useContext(ThemeContext)
-  const [displayFiles,setDisplayFiles] = useState([])
+  const {displayPath, displayFiles, setDisplayFiles, setPinnedFolders, changePath, openFile, showRecents} = useContext(ThemeContext)
   const [selected, setSelected] = useState(null)
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameID, setRenameID] = useState(null)
   const [newFileName, setNewFileName] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const isLoadingRef = useRef(false)
   const [showHidden, setShowHidden] = useState(false)
 
   const [dragged, setDragged] = useState(null)
@@ -36,24 +34,6 @@ function Filedisplay(){
     changePath(displayPath)
   },[])
 
-  // Changes the main display path and retrieves files / folders attached to the changed path.
-  async function changePath(newPath){
-    if (isLoadingRef.current || isLoading) return
-
-    setIsLoading(true)
-    isLoadingRef.current = true
-
-    const response = await navigateToReq(newPath)
-    if (response != null){
-      setDisplayFiles(response)
-      setDisplayPath(newPath)
-      console.log(newPath)
-      updateRecents(newPath)
-    }
-
-    setIsLoading(false)
-    isLoadingRef.current = false
-  }
 
   // pins entry
   async function pinEntry(e, each){
@@ -108,7 +88,6 @@ function Filedisplay(){
   // Allows user to rename (doesn't rename yet)
   function rename(e, each){
     e.stopPropagation()
-    document.body.use
     setIsRenaming(true);
     setRenameID(each.name);
     setNewFileName(each.name)
@@ -126,22 +105,12 @@ function Filedisplay(){
     }
   } 
 
-  // opens file (async because i'll open room for custom error handling later)
-  async function openFile(path) {
-    const response = await openFileReq(path)
-  }
-
   // moves file /folder from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
     if (response != null){
       setDisplayFiles(displayFiles.filter(item => item.path !== path1))
     }
-  }
-
-    // Updates the list of recents
-  async function updateRecents(path) {
-   const response = await updateRecentsReq(path)
   }
 
   // formats file's creation time, which is some float # timestamp, into a presentable date
@@ -155,7 +124,6 @@ function Filedisplay(){
           hour12: true
         }).replace(",", "");
   }
-
 
 
   // Select an entry. If selected, navigates to folder path if folder and opens file if file
