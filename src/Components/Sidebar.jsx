@@ -76,12 +76,12 @@ function Sidebar(){
           each.type == "folder" 
           ? 
           <div onClick={(e)=>{e.target.tagName !== "BUTTON" ? addChildren(each):null}} className={styles.folder}data-folder={each.path}>
-            <section className={styles.dirName}>{each.name}</section>
+            <section title={each.name} className={styles.dirName}>{each.name}</section>
             <button className={styles.openDir} onClick={()=>setDisplayPath(each.path)}>Open</button>
           </div> 
           :
           <div onClick={callOpenFile} className={styles.file}>
-            <section  className={styles.dirName}>{each.name}</section>
+            <section title={each.name} className={styles.dirName}>{each.name}</section>
           </div>
           }
           {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
@@ -195,11 +195,11 @@ function Sidebar(){
             return <div key={i} className={styles.file_folder_bg} style={{marginLeft:`${(parents.length)*10}px`}}>
             {each.type == "folder" ? 
             <div onClick={(e)=>{e.target.tagName !== "BUTTON" ?setTreePath(joinPath(treePath,each.name)):null}} className={styles.folder}>
-              <section className={styles.dirName}>{each.name}</section>
+              <section title={each.name} className={styles.dirName}>{each.name}</section>
               <button className={styles.openDir} onClick={()=>setDisplayPath(joinPath(treePath,each.name))}>Open</button>
             </div> :
             <div onClick={callOpenFile} className={styles.file}>
-              <section  className={styles.dirName}>{each.name}</section>
+              <section title={each.name}  className={styles.dirName}>{each.name}</section>
             </div>}
             </div>
           })}
