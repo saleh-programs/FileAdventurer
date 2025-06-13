@@ -12,6 +12,9 @@ import pinIcon from "../assets/pinIcon.png"
 import unpinIcon from "../assets/unpinIcon.png"
 import hideIcon from "../assets/hideIcon.png"
 import unhideIcon from "../assets/unhideIcon.png"
+import folderIcon from "../assets/folderIcon.png"
+import fileIcon from "../assets/fileIcon.png"
+
 
 function Filedisplay(){
   const [displayPath, setDisplayPath, pinnedFolders, setPinnedFolders, showRecents, setShowRecents, recents, setRecents, draggedOver, setDraggedOver] = useContext(ThemeContext)
@@ -167,8 +170,6 @@ function Filedisplay(){
       }else{
         openFile(newPath)
       }
-     
-      
   }
 
   // Sets up the drag of an element by adding event listeners for when cursor is moved or mouse is released
@@ -317,7 +318,9 @@ function Filedisplay(){
           key={each.path} 
           className={styles.file_folder_bg} 
           style={{opacity:each.hidden ? .3 : 1,}}>
-            
+            <section className={styles.entryIcon}>
+              <img src={each.type == "folder" ? folderIcon : fileIcon} />
+            </section>
             {each.type == "folder"
               ? 
             <div 

@@ -4,6 +4,8 @@
   flex-direction: column;
   overflow-y: auto;
   gap: 3px;
+  border: 3px solid rgb(182, 179, 179);
+  flex: 9;
 }
 .dash{
   position: sticky;
@@ -41,28 +43,56 @@
 }
 .path{
 }
+
+.rename{
+  font-size: 1.2rem;
+}
 .back:hover{
   background-color: antiquewhite;
   cursor: pointer;
 }
+.entryIcon{
+}
 .file, .folder{
-  border: 3px solid green;
+  flex: 1;
+  border: 1px solid green;
   height: 100%;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: 2px;
   display: flex;
   align-items: center;
 }
+.file:active, .folder:active{
+  opacity: .85;
+}
 .file:hover, .folder:hover{
   cursor: pointer;
-  opacity: .9;
+  background-color: rgb(184, 233, 246);
+  outline: 1px solid;
+  outline-offset: 3px;
 }
+
 
 .file{
   background-color: rgb(208, 233, 199);
 }
 .folder{
-  background-color: rgb(221, 199, 101);
+  background-color: rgb(248, 237, 187);
+}
+.isSelected{
+  background-color: rgb(91, 195, 224);
+}
+.isSelected:hover{
+  background-color: rgb(91, 195, 224);
+}
+.folder-dragged{
+  opacity: .3;
+}
+.folder-drop{
+  background-color: blue;
+}
+.folder-dragged:hover{
+  opacity: .3;
 }
 .folderMove{
   border: 3px solid green;
@@ -76,14 +106,14 @@
   color: white;
 }
 .file_folder_bg{
-  flex: 0 0 80px;
+  flex: 0 0 40px;
   padding-inline: 15px;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
-}
-.file_folder_bg:hover{
-  cursor: pointer;
-}
 .dirName{
   font-size: 1.2rem;
   flex: 2;
@@ -125,5 +155,13 @@
   opacity: .6;
 }
 
-
-
+.dragged{
+  position: absolute;
+  background-color: rgb(100, 100, 88);
+  color: white;
+  cursor: pointer;
+  font-size: .8rem;
+  padding-inline: 20px;
+  text-align: center;
+  border-radius: 10px;
+}
