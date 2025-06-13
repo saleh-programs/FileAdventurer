@@ -1,10 +1,31 @@
+.sidebarWrapper{
+  display: flex;
+}
 .sidebar{
   border: 1px solid white;
-  position: fixed;
-  top: 5px;
-  left: 5px;
-  right: 73%;
   padding: 10px;
+  flex: 1 0 200px;
+}
+.sidebarHandle{
+  position: relative;
+  height: 100%;
+  width: 2px;
+  background-color: rgb(70, 64, 64);
+}
+
+.sidebarHandle img{
+  -webkit-user-drag: none;
+  user-select: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+.sidebarHandle img:hover{
+  transform: translate(-50%,-50%) scale(1.1);
+  filter: contrast(.6);
+  cursor: pointer;
 }
 .searchResults{
   height: 500px;
@@ -23,6 +44,35 @@
   display: flex;
   flex-direction: column;
 }
+
+.path{
+  background-color: rgb(227, 206, 169);
+  border-radius: 10px;
+  padding: 5px 8px;
+  margin-bottom: 5px;
+}
+.treeHeader{
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 90px;
+  align-items: center;
+  justify-content: space-around;
+}
+.modes{
+  display: flex;
+  gap: 2px;
+  margin: 5px;
+}
+.modes img{
+  width: 25px;
+}
+.modes button{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: .55rem;
+}
+
 .search{
   display: flex;
   gap: 5px;
@@ -70,35 +120,43 @@
     background-color: rgb(35, 71, 71);
     cursor: pointer;
 }
+.dirName{
+  padding: 2px;
+}
 .file, .folder{
   border: 1px solid;
-  padding: 5px;
-  font-size: .8rem;
+  font-size: .70rem;
+  display: flex;
+  align-items: center;
 }
 .file:hover, .folder:hover{
   background-color: rgb(91, 158, 158);
   color: white;
   cursor: pointer;
 }
-.file_folder_bg{
-}
 .folder{
-  background-color: rgb(221, 199, 101);
+  background-color: rgb(221, 204, 126);
   display: flex;
   justify-content:  space-between;
+}
+.openDir{
+  border: none;
+  background-color:rgb(199, 179, 87);
+}
+.openDir:hover{
+  cursor: pointer;
+  background-color:rgb(157, 136, 42);
+  color: white;
 }
 .file{
   background-color: rgb(208, 233, 199);
 }
 .pinnedSection{
-  background-color: rgb(244, 231, 209);
-  border: 1px solid;
   height: 200px;
   overflow-y: auto;
   
 }
 .pinnedHeader{
-  background-color: rgb(244, 231, 209);
   position: sticky;
   top: 0px;
   text-align: center;
