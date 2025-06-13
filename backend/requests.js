@@ -306,7 +306,16 @@ function trimPath(fullpath, target){
   return newPath.join("\\")
 }
 
+//gets parts of path: "C:\\users\name" => ["C:", "users", "name"]
+function getSegments(fullpath){
+  //only edge case is "C:\\".split("\\") => ["C:", ""]
+  if (fullpath === "C:\\"){
+    return ["C:"]
+  }
+  return fullpath.split("\\")
+}
+
 export {
-  joinPath, trimPath,
+  joinPath, trimPath, getSegments,
   navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
   addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq }
