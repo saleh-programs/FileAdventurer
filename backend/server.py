@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS recents(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL)
 ''')
-# cursor.execute("DROP TABLE recents")
+# cursor.execute("DROP TABLE preferences")
 conn.close()
 
 app = FastAPI()
@@ -176,7 +176,7 @@ def getPinned():
         isHidden = cursor.fetchone() is not None
 
         pinnedEntries.append({
-            "name": "\\".join(each[0].split("\\")[:-1]),
+            "name": os.path.basename(each[0]),
             "type": "folder" if os.path.isdir(each[0]) else "file",
             "creation": fileinfo.st_ctime,
             "pinned": True,

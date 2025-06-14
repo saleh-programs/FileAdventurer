@@ -110,8 +110,8 @@
 }
 .parentDir{
   border: 1px solid;
-  padding: 5px;
-  font-size: .8rem;
+  padding: 4px;
+  font-size: .7rem;
   background-color: rgb(17, 14, 1);
   color: white;
   opacity: .6;
@@ -131,6 +131,7 @@
 }
 .file, .folder{
   border: 1px solid;
+  border-top: none;
   font-size: .70rem;
   display: flex;
   align-items: center;
@@ -140,10 +141,26 @@
   color: white;
   cursor: pointer;
 }
+
+.folderWrapper{
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.treemode > :first-child{
+  border-top: 1px solid;
+}
+.toggleOpen{
+  position: absolute;
+  left: -8px;
+  display: flex;
+  align-items: center;
+}
 .folder{
   background-color: rgb(221, 204, 126);
   display: flex;
   justify-content:  space-between;
+  flex: 1;
 }
 .openDir{
   border: none;

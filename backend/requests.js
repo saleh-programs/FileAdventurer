@@ -149,7 +149,6 @@ async function getRecentsReq() {
 
 // Retrieve files / folders from a specified path, excluding undesirables
 async function navigateToReq(path){
-  console.log(path)
   try{
     const response = await fetch(baseURL + "navigate",{
       method: 'POST',
