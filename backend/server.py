@@ -390,6 +390,28 @@ def getSearchResults(req: Path_Target):
     results = [] 
     findMatchingFiles(req.path, req.target.lower(), results)
 
+    with AccessDB("FileSystemDatabase.db") as conn:
+      cursor = conn.cursor()
+
+      for i in range(len(results)):
+        path = results[i][0]
+        name = results[i][1]
+
+        fileinfo = os.lstat(path)
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(path,"pin"))
+        isPinned = cursor.fetchone() is not None
+        cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(path,"hide"))
+        isHidden = cursor.fetchone() is not None
+        results[i] = {
+          "name": name,
+          "type": "folder" if os.path.isdir(path) else "file",
+          "creation": fileinfo.st_ctime,
+          "pinned": isPinned,
+          "hidden": isHidden,
+          "path": path,
+          "children": []
+        }
+    print(results)
     return JSONResponse(
       content = {"data":results, "success":True},
       status_code=200
@@ -403,7 +425,6 @@ def getSearchResults(req: Path_Target):
 # recursive function that checks every directory in initial path for target. "Exclusions" are not explored.
 def findMatchingFiles(path, target, results):
   exclusions = {"__pycache__","node_modules","venv","anaconda3", "appdata"}
-
   try:
     entries = os.listdir(path)
   except PermissionError:
@@ -414,9 +435,6 @@ def findMatchingFiles(path, target, results):
     lowerCaseName = name.lower()
     
     if target in lowerCaseName:
-      results.append(childPath)
+      results.append((childPath, name))
     if (lowerCaseName not in exclusions) and (os.path.isdir(childPath)) and name[0] != "." :
       findMatchingFiles(childPath, target, results)
-  
-  
-   

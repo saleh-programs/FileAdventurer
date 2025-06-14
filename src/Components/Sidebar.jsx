@@ -1,10 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Sidebar.module.css"
-import {
-  joinPath, trimPath, getSegments,
-  navigateToReq, openFileReq,renameFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
-  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, 
-  getRecentsReq} from "../../backend/requests";
+import {trimPath, getSegments, navigateToReq, getSearchResultsReq, getPinnedReq, getRecentsReq} from "../../backend/requests";
 import ThemeContext from "../assets/ThemeContext";
 
 import treeIcon from "../assets/treeIcon.png"
@@ -12,31 +8,36 @@ import stackIcon from "../assets/stackIcon.png"
 import sidebarHandle from "../assets/sidebarHandle.png"
 
 function Sidebar(){
-  const {setRecents, setShowRecents, changePath, openFile, pinnedFolders, setPinnedFolders} = useContext(ThemeContext)
+  const {setRecents, setShowRecents, changePath, openFile, pinned, setPinned} = useContext(ThemeContext)
 
   const [stackFiles, setStackFiles] = useState([])
   const [stackPath, setStackPath] = useState("C:\\Users\\Saleh\\")
   const [stackParents, setStackParents] = useState([])
   const [isLoadingStack, setIsLoadingStack] = useState(false)
   const isLoadingStackRef = useRef(false)
+
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const [searchResults, setSearchResults] = useState([])
-  const [isSearching, setIsSearching] = useState(false)
   const [searchTarget, setSearchTarget] = useState("")
+  const lastSearched = useRef(null)
+
   const [refresh, setRefresh] = useState(false)
-  const [defaultMode, setDefaultMode] = useState(true)
+  const [stackMode, setStackMode] = useState(true)
   const sidebarWidthRef = useRef(null)
 
+  // get pinned entries and Tree entries on mount
   useEffect(()=>{
     getPinnedItems()
     changeStackPath(stackPath)
   },[])
 
 
-  // gets pinned files/folders
+  // gets pinned entries
   async function getPinnedItems() {
     const response = await getPinnedReq()
     if (response != null){ 
-      setPinnedFolders(response)
+      setPinned(response)
     }
   }
 
@@ -54,25 +55,37 @@ function Sidebar(){
   }
 
   // Show search screen and get list of file/folder objects with matching target substring
-  async function searchForItem() {
-    setIsSearching(true) 
-    const response = await getSearchResultsReq(stackPath, searchTarget)
-    if (response != null){
-      setSearchResults(response)
+  async function startSearch() {
+    setShowSearch(true) 
+
+    setSearchLoading(true)
+    const currentSearch = searchTarget
+    lastSearched.current = currentSearch
+    const response = await getSearchResultsReq(stackPath, currentSearch)
+    if (currentSearch !== lastSearched.current){
+      return 
     }
+    setSearchLoading(false)
+
+    if (response != null){
+      showSearch && setSearchResults(response)
+    }
+  }
+
+  async function endSearch() {
+    setShowSearch(false);
+    setSearchLoading(false)
+    setSearchTarget("")
+    setSearchResults([])
   }
 
   // Show recents screen and get list of file/folders objects that are most frequently accessed
   async function viewRecents() {
     const response = await getRecentsReq()
     if (response != null){
-      setRecents(data)
+      setRecents(response)
     }
     setShowRecents(true)
-  }
-
-  function clickEntry(){
-
   }
 
   function renderFiles(each, depth=0){
@@ -89,7 +102,7 @@ function Sidebar(){
           <button className={styles.openDir} onClick={()=>changePath(each.path)}>Open</button>
         </div> 
         :
-        <div onClick={openFile} className={styles.file}>
+        <div onClick={()=>openFile(each.path)} className={styles.file}>
           <section title={each.name} className={styles.dirName}>{each.name}</section>
         </div>
         }
@@ -172,33 +185,39 @@ function Sidebar(){
       <div ref={sidebarWidthRef} className={styles.sidebar}>
         <div className={styles.search}>
           <input type="text" value={searchTarget} onChange={(e)=>setSearchTarget(e.target.value)}/>
-          <button onClick={searchForItem}>Search</button>
+          <button onClick={startSearch}>Search</button>
         </div>
-        {isSearching ? 
+        {showSearch ? 
         <div className={styles.searchResults}>
-          <button onClick={()=>{setIsSearching(false);setSearchResults([]);setSearchTarget("")}}>Exit Search</button>
+          <button onClick={endSearch}>Exit Search</button>
           {
-            searchResults.map((each,i)=>{
-              return <div key={i}>{each}</div>
+            searchResults.map((each)=>{
+              return <div key={each.path}>{each.path}</div>
             })
           }
         </div>
         :
         <div className={styles.minitree}  data-scrollable>
           <div className={styles.treeHeader}>
-            <section className={styles.path}>Inside {stackPath}</section>
+            {
+              !stackMode
+              ?
+                <section className={styles.path}>Inside {stackPath}</section>
+              :
+                null
+            }
             <section className={styles.modes}>
-              <button className={styles.treeMode} onClick={()=>setDefaultMode(true)}>
+              <button className={styles.treeMode} onClick={()=>setStackMode(true)}>
                 <img src={treeIcon} />
                 Tree Mode
                 </button>
-              <button className= {styles.linearMode} onClick={()=>setDefaultMode(false)}>
+              <button className= {styles.linearMode} onClick={()=>setStackMode(false)}>
                 <img src={stackIcon} />
                 Stack Mode
                 </button>
             </section>
           </div>
-          {defaultMode
+          {stackMode
           ?
           <section>
             {
@@ -208,7 +227,7 @@ function Sidebar(){
           :
           <section>
             {stackParents.map((each,i)=>{
-            return <div key={i} className={styles.parentDir} onClick={()=>changeStackPath(trimPath(stackPath, each))} style={{marginLeft:`${i*10}px`}}>
+            return <div key={i} className={styles.parentDir} onClick={()=>changeStackPath(trimPath(stackPath, each.name))} style={{marginLeft:`${i*10}px`}}>
               {each}
             </div>
           })}
@@ -219,7 +238,7 @@ function Sidebar(){
               <section title={each.name} className={styles.dirName}>{each.name}</section>
               <button className={styles.openDir} onClick={()=>changeStackPath(each.path)}>Open</button>
             </div> :
-            <div onClick={callOpenFile} className={styles.file}>
+            <div onClick={()=>openFile(each.path)} className={styles.file}>
               <section title={each.name}  className={styles.dirName}>{each.name}</section>
             </div>}
             </div>
@@ -237,16 +256,14 @@ function Sidebar(){
         <div className={styles.pinnedSection} data-scrollable>
           <h2 className={styles.pinnedHeader}>Pinned Folders<hr /></h2>
           {
-            pinnedFolders.map((each,i)=>{
+            pinned.map((each,i)=>{
               return <div  key={i} className={styles.pinnedEntries} onClick={async ()=>{setDisplayPath(each[1])}}>{each[0]}</div>
             })
           }
         </div>
       </div>
       <div className={styles.sidebarHandle}>
-        <img 
-        src={sidebarHandle}
-        onMouseDown={dragSidebar}/>
+        <img src={sidebarHandle} onMouseDown={dragSidebar}/>
       </div>
     </div>
   )

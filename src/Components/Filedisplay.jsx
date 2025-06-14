@@ -2,11 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
-import {
-  joinPath, trimPath,
-  navigateToReq, openFileReq,renameFileReq,moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
-  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, 
-  getRecentsReq} from "../../backend/requests"
+import {joinPath, renameFileReq, moveFileReq, addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq} from "../../backend/requests"
 
 import renameIcon from "../assets/renameIcon.png" 
 import pinIcon from "../assets/pinIcon.png"
@@ -18,7 +14,7 @@ import fileIcon from "../assets/fileIcon.png"
 
 
 function Filedisplay(){
-  const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, pinned, setPinned, changePath, openFile, showRecents} = useContext(ThemeContext)
+  const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, setPinned, changePath, openFile, recents,showRecents, setShowRecents} = useContext(ThemeContext)
   const [selected, setSelected] = useState(null)
 
   const [isRenaming, setIsRenaming] = useState(false)
@@ -57,11 +53,6 @@ function Filedisplay(){
     }
   },[displayPath])
 
-
-
-  useEffect(()=>{console.log(displayFiles.length)},[displayFiles])
-
-
   // pins entry
   async function pinEntry(e, each){
     e.stopPropagation()
@@ -81,7 +72,6 @@ function Filedisplay(){
     const entryPath = each.path
     const response = await removePinnedReq(entryPath)
     if (response != null){
-      console.log(pinned)
 
       setPinned(prev=>prev.filter(item=> item.path !== entryPath));
       setDisplayFiles(displayFiles.map(item=>{
@@ -127,7 +117,6 @@ function Filedisplay(){
     e.stopPropagation()
     setIsRenaming(false);
     const entryPath = each.path
-    console.log(entryPath, newFileName)
     const response = await renameFileReq(entryPath, newFileName);
     if (response != null){
       setDisplayFiles(displayFiles.map(item=>{
@@ -139,7 +128,6 @@ function Filedisplay(){
   // moves file /folder from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
-    console.log(path1, path2)
     if (response != null){
       setDisplayFiles(displayFiles.filter(item => item.path !== path1))
     }

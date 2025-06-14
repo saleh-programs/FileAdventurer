@@ -41,9 +41,10 @@ function FileSystem(){
       setDisplayFiles(response)
       setDisplayPath(newPath)
       updateRecents(newPath)
+      setShowRecents(false)
 
       setLazyLoadMax(50)
-      lazyLoadMaxRef.current = 50
+      lazyLoadMaxRef.current = 50 
     }
 
     setIsLoading(false)
@@ -57,7 +58,6 @@ function FileSystem(){
 
   // opens file (async because I'll open room for custom error handling later)
   async function openFile(path) {
-    console.log(path)
     const response = await openFileReq(path)
   }
 
