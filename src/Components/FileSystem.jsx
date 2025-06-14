@@ -16,9 +16,13 @@ function FileSystem(){
   const [showRecents, setShowRecents] = useState(false)
   const [recents, setRecents] = useState([])
 
+  const [lazyLoadMax, setLazyLoadMax] = useState(100);
+  const lazyLoadMaxRef = useRef(100)
+
   const shared = {
     displayPath, setDisplayPath,
     displayFiles, setDisplayFiles,
+    lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef,
     pinned, setPinned,
     showRecents, setShowRecents,
     recents, setRecents,
@@ -37,6 +41,9 @@ function FileSystem(){
       setDisplayFiles(response)
       setDisplayPath(newPath)
       updateRecents(newPath)
+
+      setLazyLoadMax(50)
+      lazyLoadMaxRef.current = 50
     }
 
     setIsLoading(false)

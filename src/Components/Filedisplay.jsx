@@ -18,7 +18,7 @@ import fileIcon from "../assets/fileIcon.png"
 
 
 function Filedisplay(){
-  const {displayPath, displayFiles, setDisplayFiles,pinned, setPinned, changePath, openFile, showRecents} = useContext(ThemeContext)
+  const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, pinned, setPinned, changePath, openFile, showRecents} = useContext(ThemeContext)
   const [selected, setSelected] = useState(null)
 
   const [isRenaming, setIsRenaming] = useState(false)
@@ -32,11 +32,32 @@ function Filedisplay(){
   const folderElementRef = useRef(null)
   const mainScrollable = useRef(null)
 
-  const [lazyloadMax, setLazyLoadMax] = useState(100);
 
+ 
+  //Gets files on mount
   useEffect(()=>{
     changePath(displayPath)
   },[])
+
+  //set up scrolling event listener on main display for lazy loading
+  useEffect(()=>{
+    function uponScroll(){
+      if (displayFiles.length > lazyLoadMaxRef.current){
+        const maxScroll = mainScrollable.current.scrollHeight - mainScrollable.current.clientHeight
+        if (mainScrollable.current.scrollTop > maxScroll - 200 ){
+          lazyLoadMaxRef.current = lazyLoadMaxRef.current + 200
+          setLazyLoadMax(lazyLoadMaxRef.current)
+        }
+      }
+    }
+    mainScrollable.current && mainScrollable.current.addEventListener("scroll", uponScroll)
+
+    return  ()=>{
+      mainScrollable.current && mainScrollable.current.removeEventListener("scroll", uponScroll)
+    }
+  },[displayPath])
+
+
 
   useEffect(()=>{console.log(displayFiles.length)},[displayFiles])
 
@@ -217,6 +238,7 @@ function Filedisplay(){
               clearInterval(scroll.goScroll)
               scroll.goScroll = null
             }
+
           }else{
             clearInterval(scroll.goScroll)
           }
@@ -304,7 +326,7 @@ function Filedisplay(){
         <button onClick={()=>setShowHidden(!showHidden)}>{showHidden ? "Unshow Hidden":"Show Hidden"}</button>
       </div>
       
-      {displayFiles.slice(0, lazyloadMax).map((each,i)=>{
+      {displayFiles.slice(0, lazyLoadMax).map((each,i)=>{
         if (each.hidden && !showHidden){
           return null
         }
