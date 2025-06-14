@@ -62,7 +62,7 @@
   align-items: center;
 }
 .file:active, .folder:active{
-  opacity: .85;
+  opacity: .9;
 }
 .file:hover, .folder:hover{
   cursor: pointer;

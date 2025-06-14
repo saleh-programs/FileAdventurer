@@ -18,32 +18,38 @@ import fileIcon from "../assets/fileIcon.png"
 
 
 function Filedisplay(){
-  const {displayPath, displayFiles, setDisplayFiles, setPinnedFolders, changePath, openFile, showRecents} = useContext(ThemeContext)
+  const {displayPath, displayFiles, setDisplayFiles,pinned, setPinned, changePath, openFile, showRecents} = useContext(ThemeContext)
   const [selected, setSelected] = useState(null)
+
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameID, setRenameID] = useState(null)
   const [newFileName, setNewFileName] = useState("")
+
   const [showHidden, setShowHidden] = useState(false)
 
   const [dragged, setDragged] = useState(null)
   const dragLink = useRef(null)
   const folderElementRef = useRef(null)
+  const mainScrollable = useRef(null)
 
+  const [lazyloadMax, setLazyLoadMax] = useState(100);
 
   useEffect(()=>{
     changePath(displayPath)
   },[])
 
+  useEffect(()=>{console.log(displayFiles.length)},[displayFiles])
+
 
   // pins entry
   async function pinEntry(e, each){
     e.stopPropagation()
-    const entryPath = joinPath(displayPath,each.name);
+    const entryPath = each.path;
     const response = await addPinnedReq(entryPath);
     if (response != null){
-      setPinnedFolders(prev=>[...prev,[each.name,entryPath]]);
+      setPinned(prev=>[...prev, each]);
       setDisplayFiles(displayFiles.map(item=>{
-        return each == item ? {...item, pinned: true} : item
+        return item.path === entryPath ? {...item, pinned: true} : item
     }))
     }
   }
@@ -51,12 +57,14 @@ function Filedisplay(){
   // unpins entry
   async function unpinEntry(e, each){
     e.stopPropagation()
-    const entryPath = joinPath(displayPath, each.name)
-    const response = await removePinnedReq(joinPath(displayPath, each.name))
+    const entryPath = each.path
+    const response = await removePinnedReq(entryPath)
     if (response != null){
-      setPinnedFolders(prev=>prev.filter(item=>item[0]!==each.name));
+      console.log(pinned)
+
+      setPinned(prev=>prev.filter(item=> item.path !== entryPath));
       setDisplayFiles(displayFiles.map(item=>{
-        return each == item ? {...item, pinned: false} : item
+        return item.path === entryPath ? {...item, pinned: false} : item
       }))
     }
   }
@@ -64,11 +72,11 @@ function Filedisplay(){
   // hides entry
   async function hideEntry(e, each){
     e.stopPropagation()
-    const entryPath = joinPath(displayPath,each.name)
+    const entryPath = each.path
     const response = await addHiddenReq(entryPath)
     if (response != null){
       setDisplayFiles(displayFiles.map(item=>{
-        return each == item ? {...item, hidden: true} : item
+        return item.path === entryPath ? {...item, hidden: true} : item
       }))
     }
   }
@@ -76,11 +84,11 @@ function Filedisplay(){
   // unhides entry
   async function unhideEntry(e, each){
     e.stopPropagation()
-    const entryPath = joinPath(displayPath, each.name)
+    const entryPath = each.path
     const response = await removeHiddenReq(entryPath)
     if (response != null){
       setDisplayFiles(displayFiles.map(item=>{
-        return each == item ? {...item, hidden: false} : item
+        return item.path === entryPath ? {...item, hidden: false} : item
       }))
     }
   }
@@ -89,25 +97,28 @@ function Filedisplay(){
   function rename(e, each){
     e.stopPropagation()
     setIsRenaming(true);
-    setRenameID(each.name);
+    setRenameID(each.path);
     setNewFileName(each.name)
   }
 
   // saves renamed entry 
-  async function saveRename(each, i){
+  async function saveRename(e, each){
+    e.stopPropagation()
     setIsRenaming(false);
-    const entryPath = joinPath(displayPath,each.name)
-    const response = await renameFileReq(entryPath,newFileName);
+    const entryPath = each.path
+    console.log(entryPath, newFileName)
+    const response = await renameFileReq(entryPath, newFileName);
     if (response != null){
-      const newDisplayFiles=[...displayFiles];
-      newDisplayFiles[i].name = newFileName;
-      setDisplayFiles(newDisplayFiles);
+      setDisplayFiles(displayFiles.map(item=>{
+        return item.path === entryPath ? {...item, name: newFileName} : item
+      }));
     }
   } 
 
   // moves file /folder from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
+    console.log(path1, path2)
     if (response != null){
       setDisplayFiles(displayFiles.filter(item => item.path !== path1))
     }
@@ -127,12 +138,12 @@ function Filedisplay(){
 
 
   // Select an entry. If selected, navigates to folder path if folder and opens file if file
-  function clickEntry(e, each){
+  function clickEntry(each){
       if (selected != each.path){
         setSelected(each.path)
         return
       }
-      const newPath = joinPath(displayPath, each.name);
+      const newPath = each.path;
       if (each.type == "folder"){
         changePath(newPath);
       }else{
@@ -206,6 +217,8 @@ function Filedisplay(){
               clearInterval(scroll.goScroll)
               scroll.goScroll = null
             }
+          }else{
+            clearInterval(scroll.goScroll)
           }
           scroll.scrollContainer = closestScrollable
           done = false;
@@ -216,7 +229,10 @@ function Filedisplay(){
     const dragStop = ()=>{
       setDragged(null)
       document.body.style.userSelect = ""
+
       clearInterval(scroll.goScroll)
+      scroll.goScroll = null
+      scroll.scrollContainer = null
       
       if (folderElementRef.current && folderElementRef.current.dataset.path !== selectedElement.dataset.path){
         folderElementRef.current.classList.remove(styles["folder-drop"])
@@ -245,22 +261,31 @@ function Filedisplay(){
         <div
          key={each.path}
         className={styles.file_folder_bg}
-         style={{opacity:each.hidden ? .3 : 1}}>
+         style={{opacity:each.hidden ? .4 : 1}}>
+            <section className={styles.entryIcon}>
+              <img src={each.type == "folder" ? folderIcon : fileIcon} />
+            </section>
           {each.type == "folder"
           ? 
           <div 
-          onClick={()=>dirDoubleClick(e, each)} 
-          className={styles.folder}>
+          onClick={()=>clickEntry(each)} 
+          onMouseDown={(e)=>{startDrag(e,each)}} 
+          className={`${styles.folder} ${dragged===each ? styles["folder-dragged"]: ""} ${selected === each.path ? styles.isSelected : ""}`}
+          data-path={each.path} data-folder
+          >
             <section className={styles.dirName}>{each.name}</section>
             <section className={styles.dirDate}>{formatDate(each.creation)}</section>
           </div>
           :
           <div 
-          onClick={openFile} 
-          className={styles.file}>
+          onClick={()=>clickEntry(each)} 
+          className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
+          data-path={each.path} data-file
+          >
             <section className={styles.dirName}>{each.name}</section>
             <section className={styles.dirDate}>{formatDate(each.creation)}</section>
-          </div>}
+          </div>
+          }
         </div>
         )})}
     {dragged && <div ref={dragLink} className={styles.dragged}>{dragged.name}<br/>{dragged.path}</div>}
@@ -269,14 +294,17 @@ function Filedisplay(){
   }
 
   return(
-    <div className={styles.filedisplay} data-scrollable>
+    <div
+    className={styles.filedisplay}
+    ref={mainScrollable}
+    data-scrollable>
       <div className={styles.dash}>
         <button className={styles.back} onClick={()=>{changePath(joinPath(displayPath,".."))}}>&lArr;BACK</button>
         <section className={styles.path}>Inside <strong>{displayPath}</strong></section>
         <button onClick={()=>setShowHidden(!showHidden)}>{showHidden ? "Unshow Hidden":"Show Hidden"}</button>
       </div>
       
-      {displayFiles.map((each,i)=>{
+      {displayFiles.slice(0, lazyloadMax).map((each,i)=>{
         if (each.hidden && !showHidden){
           return null
         }
@@ -285,31 +313,31 @@ function Filedisplay(){
           <div 
           key={each.path} 
           className={styles.file_folder_bg} 
-          style={{opacity:each.hidden ? .3 : 1,}}>
+          style={{opacity:each.hidden ? .4 : 1,}}>
             <section className={styles.entryIcon}>
               <img src={each.type == "folder" ? folderIcon : fileIcon} />
             </section>
             {each.type == "folder"
               ? 
             <div 
-            onClick={(e)=>clickEntry(e,each)}
+            onClick={()=>clickEntry(each)}
             onMouseDown={(e)=>{startDrag(e,each)}} 
             className={`${styles.folder} ${dragged===each ? styles["folder-dragged"]: ""} ${selected === each.path ? styles.isSelected : ""}`}
             data-path={each.path} data-folder>
 
-              { isRenaming && renameID === each.name 
+              { isRenaming && renameID === each.path 
               ?
               <section className={styles.dirName}>
-                <input className={styles.rename} value={newFileName} onChange={(e)=>setNewFileName(e.target.value)}  type="text" />
-                <button onClick={()=>{saveRename(each, i);}}>Save</button>
-                <button onClick={()=>{setIsRenaming(false);}}>Exit</button>
+                <input className={styles.rename} value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()}  type="text" />
+                <button onClick={(e)=>{saveRename(e, each);}}>Save</button>
+                <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
               </section>
               :
               <section className={styles.dirName}>{each.name}</section>
               }
               <div className={styles.entryRight}>
                 <div className={styles.icons}>
-                  {isRenaming && renameID === each.name
+                  {isRenaming && renameID === each.path
                   ?
                   null
                   :
@@ -335,27 +363,41 @@ function Filedisplay(){
             </div>
               :
             <div 
-            onClick={(e)=>clickEntry(e,each)}
+            onClick={()=>clickEntry(each)}
             className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
             data-path={each.path} data-file>
-              { isRenaming && renameID === each.name 
+              { isRenaming && renameID === each.path 
               ?
               <section className={styles.dirName}>
-                <input value={newFileName} onChange={(e)=>setNewFileName(e.target.value)}  type="text" />
-                <button onClick={()=>{saveRename(each)}}>Save</button>
-                <button onClick={()=>{setIsRenaming(false);}}>Exit</button>
+                <input value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()} type="text" />
+                <button onClick={(e)=>{saveRename(e, each)}}>Save</button>
+                <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
               </section>
               :
               <section className={styles.dirName}>{each.name}</section>
               }
               <div className={styles.entryRight}>
                 <div className={styles.icons}>
-                  {isRenaming && renameID === each.name?
+                  {isRenaming && renameID === each.path
+                  ?
                   null
                   :
-                  <button onClick={(e)=>{rename(e, each)}} title="rename"><img src={renameIcon} /></button>
+                  <button onClick={(e)=>{rename(e,each)}} title="rename"><img src={renameIcon} /></button>
                   }
-                  <button title="pin"><img src={pinIcon} /></button>
+                  {
+                    each.pinned 
+                    ?
+                    <button onClick={(e)=>unpinEntry(e,each)} title="unpin"><img src={unpinIcon} /></button>
+                    :
+                    <button onClick={(e)=>pinEntry(e,each)} title="pin"><img src={pinIcon} /></button>
+                  }
+                  {
+                    each.hidden
+                    ?
+                    <button onClick={(e)=>unhideEntry(e,each)} title="unhide"><img src={unhideIcon}/></button>
+                    :
+                    <button onClick={(e)=>hideEntry(e,each)} title="hide"><img src={hideIcon} /></button>
+                  }
                 </div>
                 <section className={styles.dirDate}>{formatDate(each.creation)}</section>
               </div>
