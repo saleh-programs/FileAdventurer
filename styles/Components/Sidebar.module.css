@@ -1,10 +1,16 @@
 .sidebarWrapper{
+  height: 100vh;
   display: flex;
 }
 .sidebar{
-  border: 1px solid white;
-  padding: 10px;
+  padding: 5px 10px;
   flex: 1 0 200px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar{
+  display: none;
 }
 .sidebarHandle{
   position: relative;
@@ -83,7 +89,7 @@
 }
 .search button{ font-size: .7rem;}
 .search input{
-  width: 150px;
+  width: 50%;
   opacity: .7;
   padding: 2px;
 }
@@ -124,6 +130,7 @@
   padding: 2px;
   max-width: 70%;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 .dirName::-webkit-scrollbar {
@@ -175,16 +182,18 @@
   background-color: rgb(208, 233, 199);
 }
 .pinnedSection{
-  height: 200px;
   overflow-y: auto;
-  
+}
+.pinnedSection::-webkit-scrollbar{
+  display: none;
+  flex: 1;
 }
 .pinnedHeader{
   position: sticky;
+  background-color: white;
   top: 0px;
   text-align: center;
   margin: 0px;
-  
 }
 .pinnedEntries{
   display: inline-block;
@@ -201,3 +210,4 @@
   background-color: white;
   transform: scale(1.03);
 }
+

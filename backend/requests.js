@@ -257,6 +257,25 @@ async function getDocumentsFolderReq(){
   }
 }
 
+// get file / folder object
+async function getEntryReq(path){
+  try{
+    const response = await fetch(baseURL + "getEntry",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path:path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null;
+  }
+}
+
 // Gets a list of paths with the matching target substring
 async function getSearchResultsReq(path, target) {
   try{
@@ -299,7 +318,7 @@ function joinPath(fullpath, added){
 function trimPath(fullpath, target){
   let newPath = fullpath.split("\\")
   newPath = newPath.slice(0,newPath.indexOf(target))
-  if (newPath.length == 1){
+  if (newPath.length <= 1){
     return "C:\\"
   }
   return newPath.join("\\")
@@ -316,5 +335,5 @@ function getSegments(fullpath){
 
 export {
   joinPath, trimPath, getSegments,
-  navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq,
+  navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq, getEntryReq,
   addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq }

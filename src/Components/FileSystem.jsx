@@ -41,8 +41,8 @@ function FileSystem(){
       setDisplayFiles(response)
       setDisplayPath(newPath)
       updateRecents(newPath)
-      setShowRecents(false)
 
+      setShowRecents(false)
       setLazyLoadMax(50)
       lazyLoadMaxRef.current = 50 
     }

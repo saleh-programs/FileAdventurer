@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
-import {joinPath, renameFileReq, moveFileReq, addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq} from "../../backend/requests"
+import {joinPath, getSegments, renameFileReq, moveFileReq, addPinnedReq, getEntryReq,addHiddenReq, removePinnedReq, removeHiddenReq, trimPath, navigateToReq} from "../../backend/requests"
 
 import renameIcon from "../assets/renameIcon.png" 
 import pinIcon from "../assets/pinIcon.png"
@@ -11,7 +11,7 @@ import hideIcon from "../assets/hideIcon.png"
 import unhideIcon from "../assets/unhideIcon.png"
 import folderIcon from "../assets/folderIcon.png"
 import fileIcon from "../assets/fileIcon.png"
-
+import previous from "../assets/previous.png"
 
 function Filedisplay(){
   const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, setPinned, changePath, openFile, recents,showRecents, setShowRecents} = useContext(ThemeContext)
@@ -26,16 +26,31 @@ function Filedisplay(){
   const [dragged, setDragged] = useState(null)
   const dragLink = useRef(null)
   const folderElementRef = useRef(null)
+  const navigateTimer = useRef(null)
   const mainScrollable = useRef(null)
 
+  useEffect(()=>{console.log(displayPath)},[displayPath])
 
  
   //Gets files on mount
   useEffect(()=>{
     changePath(displayPath)
+
+    function watchForClicks(e){
+      const cursor = getComputedStyle(e.target).cursor;
+
+        if (cursor === "auto") {
+          setSelected(null)
+        }
+    }
+    
+    document.addEventListener("click", watchForClicks)
+    return ()=>{
+      document.removeEventListener("click",watchForClicks)
+    }
   },[])
 
-  //set up scrolling event listener on main display for lazy loading
+  //set up scrolling event listener on main display for lazy loading 
   useEffect(()=>{
     function uponScroll(){
       if (displayFiles.length > lazyLoadMaxRef.current){
@@ -128,8 +143,19 @@ function Filedisplay(){
   // moves file /folder from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
+    console.log(path2)
     if (response != null){
-      setDisplayFiles(displayFiles.filter(item => item.path !== path1))
+      if (path2 !== displayPath){
+            console.log(displayPath,path2)
+
+        setDisplayFiles(displayFiles.filter(item => item.path !== path1))
+      }else{
+            console.log(path2)
+
+        console.log(path2)
+        changePath(path2)
+      }
+      
     }
   }
 
@@ -150,6 +176,8 @@ function Filedisplay(){
   function clickEntry(each){
       if (selected != each.path){
         setSelected(each.path)
+        setIsRenaming(false)
+
         return
       }
       const newPath = each.path;
@@ -164,6 +192,7 @@ function Filedisplay(){
   function startDrag(event, data){
     const selectedElement = event.currentTarget
     folderElementRef.current = null
+    navigateTimer.current = null
 
     let done = false;
     let scroll = {goScroll: null, scrollContainer: null};
@@ -197,8 +226,14 @@ function Filedisplay(){
             folderElementRef.current = folderElement
 
             if (folderElement && (folderElement.dataset.path !== selectedElement.dataset.path)){
+              clearTimeout(navigateTimer.current)
+              navigateTimer.current = setTimeout(()=>{
+                changePath(folderElement.dataset.path)
+              }, 1000)
               dragLink.current.style.cursor = "copy"
               folderElement.classList.add(styles["folder-drop"]);
+            }else if(!folderElement){
+              clearTimeout(navigateTimer.current)
             }else{
               dragLink.current.style.cursor = "no-drop"
             }
@@ -240,6 +275,7 @@ function Filedisplay(){
       setDragged(null)
       document.body.style.userSelect = ""
 
+      clearTimeout(navigateTimer.current)
       clearInterval(scroll.goScroll)
       scroll.goScroll = null
       scroll.scrollContainer = null
@@ -258,13 +294,35 @@ function Filedisplay(){
     document.addEventListener("mouseup",dragStop)
   }
 
-
+  function formPathSegments(){
+    const segments = getSegments(displayPath)
+    const result = []
+    let tempPath = displayPath
+    for (let i = segments.length-1; i >= 0; i--){
+      result.unshift("\\")
+      result.unshift([segments[i], tempPath])
+      tempPath = joinPath(tempPath, "..")
+    }
+    return result
+  }
+  
   if (showRecents){
     return (
     <div className={styles.filedisplay} data-scrollable>
       <div className={styles.dash}>
-        <button className={styles.back} onClick={()=>setShowRecents(false)}>&lArr;Exit Recents</button>
-        <section className={styles.path}>Showing Recent Entries</section>
+        <section className={styles.dashTop}>
+          <section className={styles.dashLeft}>
+            <button className={styles.back} onClick={()=>setShowRecents(false)}><img src={previous}/>Exit Recents</button>
+          </section>
+          <section className={styles.dashRight}>
+            <section className={styles.showHidden}>
+                Show Hidden
+            </section>
+          </section>
+        </section>
+        <section className={styles.dashBottom}> 
+          Showing Recent Folders
+        </section>
       </div>
       {recents.map((each,i)=>{
         return (
@@ -283,8 +341,8 @@ function Filedisplay(){
           className={`${styles.folder} ${dragged===each ? styles["folder-dragged"]: ""} ${selected === each.path ? styles.isSelected : ""}`}
           data-path={each.path} data-folder
           >
-            <section className={styles.dirName}>{each.name}</section>
-            <section className={styles.dirDate}>{formatDate(each.creation)}</section>
+            <section className={styles.dirName}>{each.path}</section>
+            <section className={styles.dirDate}>{each.name}</section>
           </div>
           :
           <div 
@@ -292,7 +350,7 @@ function Filedisplay(){
           className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
           data-path={each.path} data-file
           >
-            <section className={styles.dirName}>{each.name}</section>
+            <section className={styles.dirName}>{each.path}</section>
             <section className={styles.dirDate}>{formatDate(each.creation)}</section>
           </div>
           }
@@ -305,15 +363,42 @@ function Filedisplay(){
 
   return(
     <div
-    className={styles.filedisplay}
-    ref={mainScrollable}
-    data-scrollable>
+    className={styles.filedisplay}>
       <div className={styles.dash}>
-        <button className={styles.back} onClick={()=>{changePath(joinPath(displayPath,".."))}}>&lArr;BACK</button>
-        <section className={styles.path}>Inside <strong>{displayPath}</strong></section>
-        <button onClick={()=>setShowHidden(!showHidden)}>{showHidden ? "Unshow Hidden":"Show Hidden"}</button>
+        <section className={styles.dashTop}>
+          <section className={styles.dashLeft}>
+            <button className={styles.back} onClick={()=>{changePath(joinPath(displayPath,".."))}}><img src={previous}/>Previous</button>
+          </section>
+          <section className={styles.dashRight}>
+            <section className={styles.showHidden}>
+                Show Hidden
+                <input type="checkbox" checked={showHidden} onChange={(e)=>setShowHidden(e.target.checked)}/>
+            </section>
+          </section>
+        </section>
+        <section className={styles.dashBottom}> 
+          {formPathSegments().map((each, i)=>{
+            if (i % 2 !== 0){
+              return (<span key={i}>//</span>)
+            }else{
+              return (
+              <span
+              key={i}
+              onClick={()=>changePath(each[1])}
+              className={styles.parentSegment}
+              data-path={each[1]} data-folder>
+                {each[0]}
+              </span>)
+            }
+          })}
+        </section>
+
       </div>
       
+      <div 
+      className={styles.entries}     
+      ref={mainScrollable}
+      data-scrollable>
       {displayFiles.slice(0, lazyLoadMax).map((each,i)=>{
         if (each.hidden && !showHidden){
           return null
@@ -339,8 +424,10 @@ function Filedisplay(){
               ?
               <section className={styles.dirName}>
                 <input className={styles.rename} value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()}  type="text" />
-                <button onClick={(e)=>{saveRename(e, each);}}>Save</button>
-                <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
+                <section className={styles.renameButtons}>
+                  <button onClick={(e)=>{saveRename(e, each);}}>Save</button>
+                  <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
+                </section>
               </section>
               :
               <section className={styles.dirName}>{each.name}</section>
@@ -374,6 +461,7 @@ function Filedisplay(){
               :
             <div 
             onClick={()=>clickEntry(each)}
+             onMouseDown={(e)=>{startDrag(e,each)}} 
             className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
             data-path={each.path} data-file>
               { isRenaming && renameID === each.path 
@@ -415,6 +503,8 @@ function Filedisplay(){
             }
           </div>
         )})}
+      </div>
+
 
       {dragged && <div ref={dragLink} className={styles.dragged}>{dragged.name}<br/>{dragged.path}</div>}
     </div>

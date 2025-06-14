@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS recents(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL)
 ''')
-# cursor.execute("DROP TABLE preferences")
+# cursor.execute("DROP TABLE recents")
 conn.close()
 
 app = FastAPI()
@@ -102,9 +102,9 @@ def getRecents():
         isPinned = cursor.fetchone() is not None
         cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(each[0],"hide"))
         isHidden = cursor.fetchone() is not None
-      
+
         sortedRecentFiles.append({
-            "name": "\\".join(each[0].split("\\")[:-1]),
+            "name": os.path.basename(each[0]),
             "type": "folder" if os.path.isdir(each[0]) else "file",
             "creation": fileinfo.st_ctime,
             "pinned": isPinned,
@@ -112,6 +112,7 @@ def getRecents():
             "path": each[0],
             "children": []
         })
+        print(sortedRecentFiles)
       
     return JSONResponse(
       content={"data":sortedRecentFiles, "success":True},
@@ -381,6 +382,39 @@ def getDocumentsFolder():
       status_code=500
     )
 
+# Retrieve a specific file/folder object
+@app.post("/getEntry")
+def getEntry(req: JustPath):
+  try:
+    with AccessDB("FileSystemDatabase.db") as conn:
+      cursor = conn.cursor()
+      fileinfo =  os.lstat(req.path)
+
+      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"pin"))
+      isPinned = cursor.fetchone() is not None
+      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"hide"))
+      isHidden = cursor.fetchone() is not None
+
+      entry = {
+        "name": os.path.basename(req.path),
+        "type": "folder" if os.path.isdir(req.path) else "file",
+        "creation": fileinfo.st_ctime,
+        "pinned": isPinned,
+        "hidden": isHidden,
+        "path": req.path,
+        "children": []
+        }
+    return JSONResponse(
+      content={"data": entry,"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Failed to retrieve file / folder object"},
+      status_code=500
+    )
+
+
 # Retrieve list of paths with matching target substring anywhere within given path
 @app.post("/getSearchResults")
 def getSearchResults(req: Path_Target):
@@ -411,7 +445,6 @@ def getSearchResults(req: Path_Target):
           "path": path,
           "children": []
         }
-    print(results)
     return JSONResponse(
       content = {"data":results, "success":True},
       status_code=200
