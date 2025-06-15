@@ -42,6 +42,10 @@ function Filedisplay(){
   const [canPaste, setCanPaste] = useState(true)
   const displayFilesRef = useRef(displayFiles)
 
+  const [zoom, setZoom] = useState(0)
+  const zoomRef = useRef(0)
+  
+
 
   useLayoutEffect(()=>{
     if (dragLink.current){
@@ -68,6 +72,8 @@ function Filedisplay(){
         console.log(copiedFolder.current)
       }
     }
+
+
     function watchForCTRLV(e){
       if (e.ctrlKey && e.key === 'v' && copiedFolder.current && canPaste){
         setCanPaste(false)
@@ -75,11 +81,30 @@ function Filedisplay(){
         createCopy()
       }
     }
+    const maxZoom = 100
+    const minZoom = -50
+    function watchForZoom(e){
+      if (e.ctrlKey){
+        e.preventDefault()
+        zoomRef.current = (Math.max(minZoom, Math.min(zoomRef.current + e.deltaY,maxZoom)))
+        setZoom(zoomRef.current)
+        const newFont = 20 + .08 * zoomRef.current
+        const newHeight = 60 + .5 *zoomRef.current
+        document.querySelectorAll(`.${styles.file_folder_bg}`).forEach(elem=>{
+        elem.style.fontSize = `${newFont}px`
+        elem.style.height = `${newHeight}px`
+        })
+        console.log(zoomRef.current*.01)
+      }
+    }
     
+    const mainScrollableElement = document.querySelector(`.${styles.entries}`)
+    mainScrollableElement.addEventListener("wheel", watchForZoom, {passive: false})
     document.addEventListener("click", watchForClicks)
     window.addEventListener("keydown", watchForCTRLC)
     window.addEventListener("keydown", watchForCTRLV)
     return ()=>{
+      mainScrollableElement.removeEventListener("wheel", watchForZoom, {passive: false})
       document.removeEventListener("click",watchForClicks)
       window.removeEventListener("keydown",watchForCTRLC)
       window.removeEventListener("keydown", watchForCTRLV)
@@ -148,7 +173,7 @@ function Filedisplay(){
   }
 
   // hides entry
-  async function hideEntry(e, each){
+  async function hideEntry(e, each){ 
     e.stopPropagation()
     const entryPath = each.path
     const response = await addHiddenReq(entryPath)

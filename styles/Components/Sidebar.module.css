@@ -43,12 +43,13 @@
   flex-direction: column;
 }
 .minitree{
-  height: 500px;
   background-color: rgb(244, 231, 209);
   padding: 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  flex: 2;
+  border: 1px solid;
 }
 
 .path{
@@ -104,8 +105,7 @@
 }
 .commonFolders section{
   border: 1px solid;
-  padding: 4px;
-  font-size: 1.2rem;
+  font-size: .8rem;
   text-align: center;
   background-color: rgb(244, 231, 209);
 }
@@ -183,6 +183,8 @@
 }
 .pinnedSection{
   overflow-y: auto;
+  flex: 1;
+
 }
 .pinnedSection::-webkit-scrollbar{
   display: none;
@@ -194,6 +196,7 @@
   top: 0px;
   text-align: center;
   margin: 0px;
+  font-size: .9rem;
 }
 .pinnedEntries{
   display: inline-block;
@@ -202,8 +205,9 @@
   margin: 2px;
   padding: 10px;
   color: rgb(0, 0, 0);
-  font-size: 1.3rem;
+  font-size: .5rem;
   background-color: #f5c1c1;
+  
 }
 .pinnedEntries:hover{
   cursor: pointer;
@@ -211,3 +215,5 @@
   transform: scale(1.03);
 }
 
+
+@med

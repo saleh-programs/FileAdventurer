@@ -160,6 +160,7 @@
   border-radius: 2px;
   display: flex;
   align-items: center;
+  min-width: 700px;
 }
 .file:active, .folder:active{
   opacity: .9;
@@ -212,13 +213,14 @@
   gap: 5px;
   }
 
+
 .dirName{
-  font-size: 1.2rem;
   flex: 2;
   width: 200px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  border: 1px solid;
 }
 
 .dirNameInp{
@@ -231,6 +233,7 @@
   justify-content: space-between;
   align-items: center;
   height: 100%;
+  min-width: 300px;
 
 }
 .icons{
@@ -253,8 +256,9 @@
   cursor: pointer;
 }
 .dirDate{
-  font-size: .8rem;
+  font-size: .6em;
   opacity: .6;
+  white-space: nowrap;
 }
 
 .dragged{
