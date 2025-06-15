@@ -295,6 +295,47 @@ async function getSearchResultsReq(path, target) {
   }
 }
 
+// Creates a new folder (big surprise huh)
+async function createFolderReq(path){
+  try{
+    const response = await fetch(baseURL + "createFolder",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null
+  }
+}
+
+
+// Creates a copy of a folder 
+async function copyFolderReq(path1, path2){
+  try{
+    const response = await fetch(baseURL + "copyFolder",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path1":path1, "path2":path2})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null
+  }
+}
+
+
+
 // utility functions
 
 // Acts as os.path.join to add to a path
@@ -333,7 +374,38 @@ function getSegments(fullpath){
   return fullpath.split("\\")
 }
 
+  // formats file's creation time, which is some float # timestamp, into a presentable date
+  function formatDate(timestamp){
+    return new Date(timestamp * 1000).toLocaleString("en-US", {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        }).replace(",", "");
+  }
+
+  //sorts file names alphanumerically
+  function sortAlphanumeric(fileList){
+    const result = [...fileList]
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+    result.sort((a, b)=>collator.compare(a.name, b.name))
+    return result
+  }
+  //sorts file names by modified date
+  function sortModified(fileList){
+    const result = [...fileList]
+    result.sort((a,b)=>a.modified - b.modified)
+    return result
+  }
+  //sorts file names by creation date
+  function sortCreation(fileList){
+    const result = [...fileList]
+    result.sort((a,b)=>a.creation - b.creation)
+    return result
+  }
 export {
-  joinPath, trimPath, getSegments,
+  joinPath, trimPath, getSegments, sortAlphanumeric, sortCreation, sortModified, formatDate,
   navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq, getEntryReq,
-  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq }
+  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq, createFolderReq, copyFolderReq }

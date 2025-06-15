@@ -1,8 +1,9 @@
-import { useContext, useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
-import {joinPath, getSegments, renameFileReq, moveFileReq, addPinnedReq, getEntryReq,addHiddenReq, removePinnedReq, removeHiddenReq, trimPath, navigateToReq} from "../../backend/requests"
+import {joinPath, getSegments, sortAlphanumeric, sortCreation, sortModified,formatDate,
+renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq } from "../../backend/requests"
 
 import renameIcon from "../assets/renameIcon.png" 
 import pinIcon from "../assets/pinIcon.png"
@@ -12,10 +13,16 @@ import unhideIcon from "../assets/unhideIcon.png"
 import folderIcon from "../assets/folderIcon.png"
 import fileIcon from "../assets/fileIcon.png"
 import previous from "../assets/previous.png"
+import alphanumeric from "../assets/alphanumeric.png"
+import creation from "../assets/creation.png"
+import modified from "../assets/modified.png"
+import emptyFolder from "../assets/createFolder.png"
+
 
 function Filedisplay(){
-  const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, setPinned, changePath, openFile, recents,showRecents, setShowRecents} = useContext(ThemeContext)
+  const {displayPath, displayFiles, setDisplayFiles, lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef, setPinned, changePath, openFile, recents,showRecents, setShowRecents, globalCursorPos} = useContext(ThemeContext)
   const [selected, setSelected] = useState(null)
+  const selectedRef = useRef(selected)
 
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameID, setRenameID] = useState(null)
@@ -29,8 +36,20 @@ function Filedisplay(){
   const navigateTimer = useRef(null)
   const mainScrollable = useRef(null)
 
-  useEffect(()=>{console.log(displayPath)},[displayPath])
+  const [sortType, setSortType] = useState("alphanumeric")
 
+  const copiedFolder = useRef(null)
+  const [canPaste, setCanPaste] = useState(true)
+  const displayFilesRef = useRef(displayFiles)
+
+
+  useLayoutEffect(()=>{
+    if (dragLink.current){
+        const elemAsRect = dragLink.current.getBoundingClientRect();
+        dragLink.current.style.left = `${globalCursorPos.current.x - elemAsRect.width / 2}px`;
+        dragLink.current.style.top = `${globalCursorPos.current.y - elemAsRect.height / 2}px`;    
+      }
+  },[dragged])
  
   //Gets files on mount
   useEffect(()=>{
@@ -43,10 +62,27 @@ function Filedisplay(){
           setSelected(null)
         }
     }
+    function watchForCTRLC(e){
+      if (e.ctrlKey && e.key === 'c'){
+        copiedFolder.current = selectedRef.current
+        console.log(copiedFolder.current)
+      }
+    }
+    function watchForCTRLV(e){
+      if (e.ctrlKey && e.key === 'v' && copiedFolder.current && canPaste){
+        setCanPaste(false)
+        setTimeout(()=>{setCanPaste(true)},1000)
+        createCopy()
+      }
+    }
     
     document.addEventListener("click", watchForClicks)
+    window.addEventListener("keydown", watchForCTRLC)
+    window.addEventListener("keydown", watchForCTRLV)
     return ()=>{
       document.removeEventListener("click",watchForClicks)
+      window.removeEventListener("keydown",watchForCTRLC)
+      window.removeEventListener("keydown", watchForCTRLV)
     }
   },[])
 
@@ -67,6 +103,22 @@ function Filedisplay(){
       mainScrollable.current && mainScrollable.current.removeEventListener("scroll", uponScroll)
     }
   },[displayPath])
+
+  useEffect(()=>{
+    selectedRef.current = selected
+  },[selected])
+
+    useEffect(()=>{
+    displayFilesRef.current = displayFiles
+  },[displayFiles])
+
+  async function createCopy() {
+    const response = await copyFolderReq(copiedFolder.current, joinPath(copiedFolder.current,".."))
+    if (response != null){
+      const newFiles = [response,...displayFilesRef.current]
+      setDisplayFiles(sortedDisplay(newFiles))
+    }
+  }
 
   // pins entry
   async function pinEntry(e, each){
@@ -124,7 +176,7 @@ function Filedisplay(){
     e.stopPropagation()
     setIsRenaming(true);
     setRenameID(each.path);
-    setNewFileName(each.name)
+    setNewFileName(each.name) 
   }
 
   // saves renamed entry 
@@ -134,9 +186,10 @@ function Filedisplay(){
     const entryPath = each.path
     const response = await renameFileReq(entryPath, newFileName);
     if (response != null){
-      setDisplayFiles(displayFiles.map(item=>{
+      const newFiles = displayFiles.map(item=>{
         return item.path === entryPath ? {...item, name: newFileName} : item
-      }));
+      })
+      setDisplayFiles(sortedDisplay(newFiles));
     }
   } 
 
@@ -158,19 +211,26 @@ function Filedisplay(){
       
     }
   }
-
-  // formats file's creation time, which is some float # timestamp, into a presentable date
-  function formatDate(timestamp){
-    return new Date(timestamp * 1000).toLocaleString("en-US", {
-          year: "numeric",
-          month: "numeric",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true
-        }).replace(",", "");
+  function sortedDisplay(files) {
+    if (sortType === "alphanumeric"){
+      return sortAlphanumeric(files)
+    }else if(sortType === "creation"){
+      return sortCreation(files)
+    }else{
+      return sortModified(files)
+    }
   }
 
+  async function createFolder() {
+    const response = await createFolderReq(displayPath)
+    if (response != null){
+      mainScrollable.current.scrollTop = 0
+      setDisplayFiles(prev=>[response ,...prev])
+      setIsRenaming(true)
+      setRenameID(response.path);
+      setNewFileName(response.name) 
+    }
+  }
 
   // Select an entry. If selected, navigates to folder path if folder and opens file if file
   function clickEntry(each){
@@ -314,11 +374,6 @@ function Filedisplay(){
           <section className={styles.dashLeft}>
             <button className={styles.back} onClick={()=>setShowRecents(false)}><img src={previous}/>Exit Recents</button>
           </section>
-          <section className={styles.dashRight}>
-            <section className={styles.showHidden}>
-                Show Hidden
-            </section>
-          </section>
         </section>
         <section className={styles.dashBottom}> 
           Showing Recent Folders
@@ -366,15 +421,30 @@ function Filedisplay(){
     className={styles.filedisplay}>
       <div className={styles.dash}>
         <section className={styles.dashTop}>
-          <section className={styles.dashLeft}>
+          <section className={styles.dashContainer1}>
             <button className={styles.back} onClick={()=>{changePath(joinPath(displayPath,".."))}}><img src={previous}/>Previous</button>
           </section>
-          <section className={styles.dashRight}>
+          <section className={styles.dashContainer2}>
+            <button onClick={createFolder}>
+              <span>Create Folder</span>
+              <img src={emptyFolder}/>     
+            </button>
+          </section>
+          <section className={styles.dashContainer3}>
+            <span>Sort by:</span>
+            <div className={styles.sortButtons}>
+              <button title="Alphanumeric sort" onClick={()=>{setSortType("alphanumeric");setDisplayFiles(sortAlphanumeric(displayFiles))}} className={sortType === "alphanumeric" ? styles.clicked : ""}><img src={alphanumeric}/></button>
+              <button title="Sort by date of creation" onClick={()=>{setSortType("creation");setDisplayFiles(sortCreation(displayFiles))}} className={sortType === "creation" ? styles.clicked : ""}><img src={creation}/></button>
+              <button title="Sort by last modified" onClick={()=>{setSortType("modified");setDisplayFiles(sortModified(displayFiles))}} className={sortType === "modified" ? styles.clicked : ""}><img src={modified}/></button>
+            </div>
+          </section>
+          <section className={styles.dashContainer4}>
             <section className={styles.showHidden}>
                 Show Hidden
                 <input type="checkbox" checked={showHidden} onChange={(e)=>setShowHidden(e.target.checked)}/>
             </section>
           </section>
+        
         </section>
         <section className={styles.dashBottom}> 
           {formPathSegments().map((each, i)=>{

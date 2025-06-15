@@ -40,10 +40,16 @@ app.add_middleware(
 
 class JustPath(BaseModel):
   path: str
-class Path_Target(BaseModel):
+class RenameReq(BaseModel):
   path: str
   target: str
-class ChangePath(BaseModel):
+class SearchReq(BaseModel):
+  path: str
+  target: str
+class MoveReq(BaseModel):
+  path1: str
+  path2: str
+class CopyReq(BaseModel):
   path1: str
   path2: str
 
@@ -255,7 +261,7 @@ def open(req: JustPath):
   
 # rename a folder / file
 @app.post("/rename")
-def rename(req: Path_Target):
+def rename(req: RenameReq):
   try:
     fileToRenamePath = os.path.join(os.path.dirname(req.path),req.target)
     os.rename(req.path, fileToRenamePath)
@@ -271,7 +277,7 @@ def rename(req: Path_Target):
 
 # Move a file/folder to a directory
 @app.post("/move")
-def move(req: ChangePath):
+def move(req: MoveReq):
   try:
     shutil.move(req.path1, req.path2)
     return JSONResponse(
@@ -314,6 +320,74 @@ def getDocumentsFolder():
       status_code=500
     )
 
+# Create Folder
+@app.post("/createFolder")
+def createFolder(req: JustPath):
+  try:
+    newPath = os.path.join(req.path, "New Folder")
+    count = 2
+    while (os.path.exists(newPath)):
+      newPath = os.path.join(req.path, f"New Folder ({count})")
+      count += 1
+
+    os.mkdir(newPath)
+    fileinfo = os.lstat(newPath)
+    createdFolder = {
+        "name": os.path.basename(newPath),
+        "type": "folder",
+        "creation": fileinfo.st_ctime,
+        "modified": fileinfo.st_mtime,
+        "pinned": False,
+        "hidden": False,
+        "path": newPath,
+        "children": []
+    }
+    return JSONResponse(
+      content={"data": createdFolder,"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Failed to create folder"},
+      status_code=500
+    )
+  
+# makes a copy of a file or folder
+@app.post("/copyFolder")
+def copyFolder(req: CopyReq):
+  try:
+    newPath = os.path.join(req.path2, f"{os.path.basename(req.path1)} -Copy")
+    count = 2
+    while (os.path.exists(newPath)):
+      newPath = os.path.join(req.path2, f"{os.path.basename(req.path1)} -Copy({count})")
+      count += 1
+
+    fileType = "folder" if os.path.isdir(req.path1) else "file"
+    if fileType == "folder":
+      shutil.copytree(req.path1, newPath)
+    else:
+      shutil.copy(req.path1, newPath)
+
+    fileinfo = os.lstat(newPath)
+    copiedFolder = {
+        "name": os.path.basename(newPath),
+        "type": fileType,
+        "creation": fileinfo.st_ctime,
+        "modified": fileinfo.st_mtime,
+        "pinned": False,
+        "hidden": False,
+        "path": newPath,
+        "children": []
+    }
+    return JSONResponse(
+      content={"data": copiedFolder,"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Failed to copy folder"},
+      status_code=500
+    )
 
 
 # Retrieve a specific file/folder object
@@ -352,7 +426,7 @@ def getEntry(req: JustPath):
 
 # Retrieve list of paths with matching target substring anywhere within given path
 @app.post("/getSearchResults")
-def getSearchResults(req: Path_Target):
+def getSearchResults(req: SearchReq):
   try:
     if req.target == "":
       raise ValueError
@@ -417,5 +491,3 @@ def getEntries(pathList):
         "children": []
         })
     return results
-  
-

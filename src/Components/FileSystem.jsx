@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 
 import ThemeContext from "../assets/ThemeContext"
 import Filedisplay from "./Filedisplay"
@@ -19,6 +19,21 @@ function FileSystem(){
   const [lazyLoadMax, setLazyLoadMax] = useState(100);
   const lazyLoadMaxRef = useRef(100)
 
+  const globalCursorPos = useRef({x:0,y:0})
+
+  //Always make cursor pos available 
+  useEffect(()=>{
+    function getCursorPos(e){
+      globalCursorPos.current.x = e.clientX
+      globalCursorPos.current.y = e.clientY
+
+    }
+    window.addEventListener("mousemove", getCursorPos)
+    return ()=>{
+      window.removeEventListener("mousemove", getCursorPos)
+    }
+  },[])
+
   const shared = {
     displayPath, setDisplayPath,
     displayFiles, setDisplayFiles,
@@ -26,7 +41,8 @@ function FileSystem(){
     pinned, setPinned,
     showRecents, setShowRecents,
     recents, setRecents,
-    changePath, updateRecents, openFile
+    changePath, updateRecents, openFile,
+    globalCursorPos
   }
 
   // Changes the main display path and gets files / folders attached to the changed path.
