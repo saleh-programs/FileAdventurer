@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Sidebar.module.css"
-import {trimPath, getSegments, navigateToReq, getSearchResultsReq, getPinnedReq, getRecentsReq, getDownloadsFolderReq, getDocumentsFolderReq} from "../../backend/requests";
+import {trimPath, getSegments, navigateToReq, getSearchResultsReq, getPinnedReq, getRecentsReq, getDownloadsFolderReq, removePinnedReq, getDocumentsFolderReq} from "../../backend/requests";
 import ThemeContext from "../assets/ThemeContext";
 
 import treeIcon from "../assets/treeIcon.png"
@@ -8,6 +8,9 @@ import stackIcon from "../assets/stackIcon.png"
 import sidebarHandle from "../assets/sidebarHandle.png"
 import opened from "../assets/opened.png"
 import closed from "../assets/closed.png"
+import unpinIcon from "../assets/unpinIcon.png"
+import frames from "../assets/willowFrames.js"
+
 
 function Sidebar(){
   const {setRecents, setShowRecents, changePath, openFile, pinned, setPinned} = useContext(ThemeContext)
@@ -23,12 +26,21 @@ function Sidebar(){
   const [searchResults, setSearchResults] = useState([])
   const [searchTarget, setSearchTarget] = useState("")
   const lastSearched = useRef(null)
+  const searchLoadingRef = useRef(false)
 
   const [refresh, setRefresh] = useState(false)
   const [stackMode, setStackMode] = useState(true)
   const sidebarWidthRef = useRef(null)
 
   const [expanded, setExpanded] = useState(new Set())
+  const [frameIndex, setFrameIndex] = useState(0)
+  const frameIndexRef = useRef(0)
+  const willowRef = useRef(null)
+  const willowInfo = useRef({
+    speed: 6,
+    framerate: 9,
+    direction: 1
+  })
 
   // get pinned entries and Tree entries on mount
   useEffect(()=>{
@@ -56,7 +68,6 @@ function Sidebar(){
   //go to documents folder
   async function goToDocuments() {
     const response = await getDocumentsFolderReq()
-    console.log(response)
     if (response != null){
       changePath(response)
     }
@@ -94,25 +105,74 @@ function Sidebar(){
     setRefresh(!refresh)
   }
 
+  function startAnimation(){
+    let lastTime = 0
+    function moveWillow(time){
+      if (!willowRef.current && searchLoadingRef.current){
+        requestAnimationFrame(moveWillow)
+        return
+      }
+      const delta = (time - lastTime) / 1000
+      lastTime = time
+      //animate willow
+      const increment = delta * willowInfo.current.framerate
+      frameIndexRef.current += increment
+      if (frameIndexRef.current > frames.length){
+        frameIndexRef.current = 0
+        setFrameIndex(0)
+      }else{
+        if (Math.floor(frameIndexRef.current - increment) !== frameIndex){
+          setFrameIndex(Math.floor(frameIndexRef.current))
+        }
+      }
+      
+
+      // Move Willow
+      const containerRect = sidebarWidthRef.current.getBoundingClientRect()
+      const currentX = parseFloat(getComputedStyle(willowRef.current).left)
+      if (currentX > containerRect.right + 120 && willowInfo.current.direction == 1){
+        willowInfo.current.direction = -1
+      }else if ((currentX < containerRect.left - 120 && willowInfo.current.direction == -1)){
+        willowInfo.current.direction = 1
+      }
+      willowRef.current.style.left = `${currentX + willowInfo.current.speed * willowInfo.current.direction}px`
+
+      
+      if (searchLoadingRef.current){
+        requestAnimationFrame(moveWillow)
+      }
+    }
+    requestAnimationFrame(moveWillow)
+  }
+
   // Show search screen and get list of file/folder objects with matching target substring
   async function startSearch() {
-    setShowSearch(true) 
+    if (searchTarget === "" || searchTarget === lastSearched.current){
+      return
+    }
 
+    !searchLoadingRef.current && startAnimation() 
+    setShowSearch(true) 
     setSearchLoading(true)
+    searchLoadingRef.current = true
+
     const currentSearch = searchTarget
     lastSearched.current = currentSearch
     const response = await getSearchResultsReq(stackPath, currentSearch)
+
     if (currentSearch !== lastSearched.current){
       return 
     }
     setSearchLoading(false)
+    searchLoadingRef.current = false
 
     if (response != null){
-      showSearch && setSearchResults(response)
+      setSearchResults(response)
     }
   }
 
   async function endSearch() {
+    lastSearched.current = null
     setShowSearch(false);
     setSearchLoading(false)
     setSearchTarget("")
@@ -225,6 +285,40 @@ function Sidebar(){
     isLoadingStackRef.current = false
   }
 
+    // unpins entry
+  async function unpinEntry(e, each){
+    e.stopPropagation()
+    const entryPath = each.path
+    const response = await removePinnedReq(entryPath)
+    if (response != null){
+      setPinned(prev=>prev.filter(item=> item.path !== entryPath));
+      setDisplayFiles(displayFiles.map(item=>{
+        return item.path === entryPath ? {...item, pinned: false} : item
+      }))
+    }
+  }
+
+  // Select an entry. If selected, navigates to folder path if folder and opens file if file (for pinned items)
+  function clickEntry(each){
+      if (each.type == "folder"){
+        changePath(each.path);
+      }else{
+        openFile(each.path)
+      }
+  }
+
+  function getHighlightedPortion(path){
+    const target = lastSearched.current.toLowerCase()
+    const newPath = path.toLowerCase()
+    const targetIdx = newPath.indexOf(target)
+    
+    const maxLength = 50
+    const startingStem = targetIdx+1 > maxLength ? `...${path.slice((targetIdx+1)-maxLength,targetIdx)}`: path.slice(0, targetIdx)
+    return <span>
+      {startingStem}
+      <strong style={{backgroundColor:"yellow",opacity:'.6'}}>{path.slice(targetIdx, targetIdx + target.length)}</strong>
+      {path.slice(targetIdx + target.length, path.length)}</span>
+  }
   return(
     <div className={styles.sidebarWrapper}>
       <div ref={sidebarWidthRef} className={styles.sidebar}>
@@ -233,27 +327,57 @@ function Sidebar(){
           <button onClick={startSearch}>Search</button>
         </div>
         {showSearch ? 
-        <div className={styles.searchResults} data-scrollable>
+         <>
           <button onClick={endSearch}>Exit Search</button>
-          {
-            searchResults.map((each)=>{
-              return <div key={each.path}>{each.path}</div>
-            })
-          }
-        </div>
+          <span className={styles.searchingMessage}>Searching all entries in {stackPath}</span>
+          {searchLoading
+            ?
+            <div className={styles.willowContainer}>
+              <img style={{transform: willowInfo.current.direction == -1 ? "scaleX(-1)": "none"}} ref={willowRef} src={frames[frameIndex]} />
+            </div>
+            :
+            <div className={styles.searchResults} data-scrollable>
+              {
+                searchResults.map((each)=>{
+                  return (
+                    <div
+                      key={each.path}
+                      className={styles.file_folder_bg}>
+                      {each.type == "folder"
+                        ? 
+                        <div 
+                        onClick={()=>{changePath(each.path)}}
+                        className={styles.folder}
+                        data-path={each.path} data-folder>
+                          <section title={each.name} className={styles.dirName}>{getHighlightedPortion(each.path)}</section>
+                        </div> 
+                        :
+                        <div
+                        onClick={()=>openFile(each.path)}
+                        className={styles.file}
+                        data-path={each.path} data-folder>
+                          <section title={each.name}  className={styles.dirName}>{getHighlightedPortion(each.path)}</section>
+                        </div>}
+                      </div>
+                  )
+                })
+              }
+            </div>
+            }
+            </>
         :
         <div className={styles.minitree}  data-scrollable>
           <div className={styles.treeHeader}>
-            { stackMode ? <section className={styles.path}>Inside {stackPath}</section> : null }
+            <section className={styles.path}>Inside {stackPath}</section>
 
             <section className={styles.modes}>
+                <button className= {styles.linearMode} onClick={()=>setStackMode(true)}>
+                  <img src={stackIcon} />
+                  Stack Mode
+                </button>
               <button className={styles.treeMode} onClick={()=>setStackMode(false)}>
                 <img src={treeIcon} />
                 Tree Mode
-                </button>
-              <button className= {styles.linearMode} onClick={()=>setStackMode(true)}>
-                <img src={stackIcon} />
-                Stack Mode
                 </button>
             </section>
           </div>
@@ -278,15 +402,24 @@ function Sidebar(){
               )})}
             {stackFiles.map((each,i)=>{
               return ( 
-              <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:`${(stackParents.length)*10}px`}}>
+              <div
+               key={each.path}
+              className={styles.file_folder_bg}
+              style={{marginLeft:`${(stackParents.length)*10}px`}}>
                 {each.type == "folder"
                 ? 
-                <div onClick={()=>{changeStackPath(each.path)}} className={styles.folder}>
+                <div 
+                onClick={()=>{changeStackPath(each.path)}}
+                className={styles.folder}
+                data-path={each.path} data-folder>
                   <section title={each.name} className={styles.dirName}>{each.name}</section>
                   <button className={styles.openDir} onClick={(e)=>{e.stopPropagation();changePath(each.path);}}>Open</button>
                 </div> 
                 :
-                <div onClick={()=>openFile(each.path)} className={styles.file}>
+                <div
+                onClick={()=>openFile(each.path)}
+                className={styles.file}
+                data-path={each.path} data-folder>
                   <section title={each.name}  className={styles.dirName}>{each.name}</section>
                 </div>}
               </div>
@@ -303,11 +436,20 @@ function Sidebar(){
         </div>
         <div className={styles.pinnedSection} data-scrollable>
           <h2 className={styles.pinnedHeader}>Pinned Folders<hr /></h2>
-          {
-            pinned.map((each,i)=>{
-              return <div  key={each.path} className={styles.pinnedEntries} onClick={()=>changePath(each.path)}>{each.name}</div>
-            })
-          }
+          <div className={styles.pinnedItems}>
+            {
+              pinned.map((each,i)=>{
+                return (
+                <div  key={each.path} className={styles.pinnedEntry} onClick={()=>clickEntry(each)}>
+                  <span>{each.name}</span>
+                  <button onClick={(e)=>unpinEntry(e, each)}>
+                    <img src={unpinIcon} />
+                  </button>
+                  
+                </div>)
+              })
+            }
+          </div>
         </div>
       </div>
       <div className={styles.sidebarHandle}>

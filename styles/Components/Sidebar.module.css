@@ -4,7 +4,7 @@
 }
 .sidebar{
   padding: 5px 10px;
-  flex: 1 0 200px;
+  width: 400px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -33,6 +33,10 @@
   filter: contrast(.6);
   cursor: pointer;
 }
+.searchingMessage{
+  font-size: .6rem;
+
+}
 .searchResults{
   height: 500px;
   font-size: .8rem;
@@ -41,6 +45,22 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+.searchResults button{
+  padding: 5px;
+  border: 1px solid;
+  cursor: pointer;
+}
+.searchResults button:hover{
+  transform: scale(.95);
+}
+
+.willowContainer{
+  position: relative;
+  height: 70px;
+}
+.willowContainer img{
+  position:absolute;
 }
 .minitree{
   background-color: rgb(244, 231, 209);
@@ -61,7 +81,7 @@
 .treeHeader{
   display: flex;
   flex-direction: column;
-  flex: 0 0 90px;
+  /* flex: 0 0 90px; */
   align-items: center;
   justify-content: space-around;
 }
@@ -184,11 +204,12 @@
 .pinnedSection{
   overflow-y: auto;
   flex: 1;
-
+  max-width: 100%;
 }
 .pinnedSection::-webkit-scrollbar{
   display: none;
   flex: 1;
+
 }
 .pinnedHeader{
   position: sticky;
@@ -198,8 +219,11 @@
   margin: 0px;
   font-size: .9rem;
 }
-.pinnedEntries{
-  display: inline-block;
+.pinnedItems{
+  display: flex;
+  flex-wrap: wrap;
+}
+.pinnedEntry{
   border: 1px solid;
   border-radius: 10px;
   margin: 2px;
@@ -207,13 +231,21 @@
   color: rgb(0, 0, 0);
   font-size: .5rem;
   background-color: #f5c1c1;
-  
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+.pinnedEntry button{
+  padding: 0;
+}
+.pinnedEntry button:hover{
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
 .pinnedEntries:hover{
   cursor: pointer;
   background-color: white;
   transform: scale(1.03);
 }
 
-
-@med
