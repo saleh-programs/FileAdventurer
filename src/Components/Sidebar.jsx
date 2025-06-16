@@ -13,7 +13,7 @@ import frames from "../assets/willowFrames.js"
 
 
 function Sidebar(){
-  const {setRecents, setShowRecents, changePath, openFile, pinned, setPinned} = useContext(ThemeContext)
+  const {setRecents, setShowRecents, changePath, openFile, pinned, setPinned,displayFiles, setDisplayFiles} = useContext(ThemeContext)
 
   const [stackFiles, setStackFiles] = useState([])
   const [stackPath, setStackPath] = useState("C:\\Users\\Saleh")
@@ -108,10 +108,10 @@ function Sidebar(){
   function startAnimation(){
     let lastTime = 0
     function moveWillow(time){
-      if (!willowRef.current && searchLoadingRef.current){
-        requestAnimationFrame(moveWillow)
+      if (!searchLoadingRef.current){
         return
       }
+  
       const delta = (time - lastTime) / 1000
       lastTime = time
       //animate willow
@@ -138,9 +138,7 @@ function Sidebar(){
       willowRef.current.style.left = `${currentX + willowInfo.current.speed * willowInfo.current.direction}px`
 
       
-      if (searchLoadingRef.current){
-        requestAnimationFrame(moveWillow)
-      }
+      requestAnimationFrame(moveWillow)
     }
     requestAnimationFrame(moveWillow)
   }
@@ -323,7 +321,7 @@ function Sidebar(){
     <div className={styles.sidebarWrapper}>
       <div ref={sidebarWidthRef} className={styles.sidebar}>
         <div className={styles.search}>
-          <input type="text" value={searchTarget} onChange={(e)=>setSearchTarget(e.target.value)}/>
+          <input placeholder={`Search ${stackPath}`} type="text" value={searchTarget} onChange={(e)=>setSearchTarget(e.target.value)}/>
           <button onClick={startSearch}>Search</button>
         </div>
         {showSearch ? 
@@ -337,6 +335,7 @@ function Sidebar(){
             </div>
             :
             <div className={styles.searchResults} data-scrollable>
+              {searchResults.length == 0 && <section>No results found</section>}
               {
                 searchResults.map((each)=>{
                   return (
@@ -349,14 +348,14 @@ function Sidebar(){
                         onClick={()=>{changePath(each.path)}}
                         className={styles.folder}
                         data-path={each.path} data-folder>
-                          <section title={each.name} className={styles.dirName}>{getHighlightedPortion(each.path)}</section>
+                          <section title={each.name} className={styles.search_dirName}>{getHighlightedPortion(each.path)}</section>
                         </div> 
                         :
                         <div
                         onClick={()=>openFile(each.path)}
                         className={styles.file}
                         data-path={each.path} data-folder>
-                          <section title={each.name}  className={styles.dirName}>{getHighlightedPortion(each.path)}</section>
+                          <section title={each.name}  className={styles.search_dirName}>{getHighlightedPortion(each.path)}</section>
                         </div>}
                       </div>
                   )

@@ -66,9 +66,10 @@
 .dashContainer3{
   flex: 1;
   display: flex;
+  gap: 5px;
   flex-direction: column;
 }
-.dashContainer3 button{
+.sortButtons button{
   border: 1px solid gray;
   border-radius: 5px;
   overflow: hidden;
@@ -76,10 +77,13 @@
   line-height: 0;
   box-shadow: inset 10px 10px 10px rgba(75, 55, 55, 0.2);
 }
-.dashContainer3 button:hover{
+.sortButtons button:hover{
   transform: scale(1.05);
   cursor: pointer;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+.reverseButton:hover{
+  cursor: pointer;
 }
 
 .sortButtons{
@@ -189,7 +193,7 @@
   opacity: .3;
 }
 .folder-drop{
-  background-color: blue;
+  background-color: rgb(46, 46, 194) !important;
 }
 .folder-dragged:hover{
   opacity: .3;
@@ -220,7 +224,6 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  border: 1px solid;
 }
 
 .dirNameInp{
@@ -235,6 +238,11 @@
   height: 100%;
   min-width: 300px;
 
+}
+
+.deleteButton:hover{
+  cursor: pointer;
+  transform: scale(1.1);
 }
 .icons{
   display: flex;

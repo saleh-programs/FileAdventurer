@@ -2,8 +2,9 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
+import DeleteWarning from "./DeleteWarning"
 import {joinPath, getSegments, sortAlphanumeric, sortCreation, sortModified,formatDate,
-renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq } from "../../backend/requests"
+renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq, deleteEntryReq } from "../../backend/requests"
 
 import renameIcon from "../assets/renameIcon.png" 
 import pinIcon from "../assets/pinIcon.png"
@@ -12,6 +13,7 @@ import hideIcon from "../assets/hideIcon.png"
 import unhideIcon from "../assets/unhideIcon.png"
 import folderIcon from "../assets/folderIcon.png"
 import fileIcon from "../assets/fileIcon.png"
+import trashIcon from "../assets/trashIcon.png" 
 import previous from "../assets/previous.png"
 import alphanumeric from "../assets/alphanumeric.png"
 import creation from "../assets/creation.png"
@@ -45,7 +47,7 @@ function Filedisplay(){
   const [zoom, setZoom] = useState(0)
   const zoomRef = useRef(0)
   
-
+  const [deletingID, setDeletingID] = useState(null)
 
   useLayoutEffect(()=>{
     if (dragLink.current){
@@ -69,7 +71,6 @@ function Filedisplay(){
     function watchForCTRLC(e){
       if (e.ctrlKey && e.key === 'c'){
         copiedFolder.current = selectedRef.current
-        console.log(copiedFolder.current)
       }
     }
 
@@ -94,7 +95,6 @@ function Filedisplay(){
         elem.style.fontSize = `${newFont}px`
         elem.style.height = `${newHeight}px`
         })
-        console.log(zoomRef.current*.01)
       }
     }
     
@@ -221,7 +221,6 @@ function Filedisplay(){
   // moves file /folder from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
-    console.log(path2)
     if (response != null){
       if (path2 !== displayPath){
             console.log(displayPath,path2)
@@ -283,12 +282,17 @@ function Filedisplay(){
     let scroll = {goScroll: null, scrollContainer: null};
     let startedDragging = false
 
+    const startCursor = {x:event.clientX, y:event.clientY}
+
     function dragMove(e) {
       // in case user is clicking and not dragging
       if (!startedDragging){
-        setDragged(data)
-        startedDragging = true
-        document.body.style.userSelect = "none"
+        const distFromStart = Math.sqrt(Math.abs((e.clientX - startCursor.x)**2 + (e.clientY - startCursor.y)**2 ))
+        if (distFromStart > 3){
+          setDragged(data)
+          startedDragging = true
+          document.body.style.userSelect = "none"
+        }
       }
 
       if (!done){
@@ -317,11 +321,12 @@ function Filedisplay(){
               }, 1000)
               dragLink.current.style.cursor = "copy"
               folderElement.classList.add(styles["folder-drop"]);
-            }else if(!folderElement){
-              clearTimeout(navigateTimer.current)
             }else{
               dragLink.current.style.cursor = "no-drop"
             }
+          }
+          if (!folderElement || scroll.goScroll){
+            clearTimeout(navigateTimer.current)
           }
           
           // visually move the element
@@ -390,7 +395,20 @@ function Filedisplay(){
     }
     return result
   }
-  
+
+  function handleDelete(each){
+    if (!deletingID){
+      setDeletingID(each)
+    }
+  }
+
+  async function deleteEntry(each){
+    const response = await deleteEntryReq(each.path)
+    if (response != null){
+      setDisplayFiles(displayFiles.filter(item=> item.path !== each.path))
+    }
+  }
+
   if (showRecents){
     return (
     <div className={styles.filedisplay} data-scrollable>
@@ -444,6 +462,7 @@ function Filedisplay(){
   return(
     <div
     className={styles.filedisplay}>
+      {deletingID && <DeleteWarning setDeletingID={setDeletingID} deletingId={deletingID} deleteEntry={deleteEntry}/>}
       <div className={styles.dash}>
         <section className={styles.dashTop}>
           <section className={styles.dashContainer1}>
@@ -462,6 +481,7 @@ function Filedisplay(){
               <button title="Sort by date of creation" onClick={()=>{setSortType("creation");setDisplayFiles(sortCreation(displayFiles))}} className={sortType === "creation" ? styles.clicked : ""}><img src={creation}/></button>
               <button title="Sort by last modified" onClick={()=>{setSortType("modified");setDisplayFiles(sortModified(displayFiles))}} className={sortType === "modified" ? styles.clicked : ""}><img src={modified}/></button>
             </div>
+            <button className={styles.reverseButton} onClick={()=>setDisplayFiles([...displayFiles].reverse())}>Reverse</button> 
           </section>
           <section className={styles.dashContainer4}>
             <section className={styles.showHidden}>
@@ -596,6 +616,9 @@ function Filedisplay(){
               </div>
             </div>
             }
+            <section className={styles.entryIcon}>
+              <img className={styles.deleteButton} src={trashIcon} onClick={()=>handleDelete(each)} />
+            </section>
           </div>
         )})}
       </div>

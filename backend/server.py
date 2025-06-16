@@ -422,6 +422,24 @@ def getEntry(req: JustPath):
       status_code=500
     )
 
+#deletes a path
+@app.delete("/deleteEntry")
+def deleteEntry(req: JustPath):
+  try:
+    if os.path.isdir(req.path):
+      shutil.rmtree(req.path)
+    else:
+      os.remove(req.path)
+    
+    return JSONResponse(
+      content={"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Failed to delete path"},
+      status_code=500
+    )
 
 
 # Retrieve list of paths with matching target substring anywhere within given path
@@ -460,6 +478,7 @@ def findMatchingFiles(path, target, results):
       results.append(childPath)
     if (lowerCaseName not in exclusions) and (os.path.isdir(childPath)) and name[0] != "." :
       findMatchingFiles(childPath, target, results)
+
 
 
 

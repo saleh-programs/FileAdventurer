@@ -81,7 +81,6 @@
 .treeHeader{
   display: flex;
   flex-direction: column;
-  /* flex: 0 0 90px; */
   align-items: center;
   justify-content: space-around;
 }
@@ -99,6 +98,11 @@
   align-items: center;
   font-size: .55rem;
 }
+.modes button:hover{
+  transform: scale(1.1);
+  background-color: #765efa65;
+  cursor: pointer;
+}
 
 .search{
   display: flex;
@@ -110,9 +114,10 @@
 }
 .search button{ font-size: .7rem;}
 .search input{
-  width: 50%;
+  width: 60%;
   opacity: .7;
   padding: 2px;
+  font-size: .6em;
 }
 .search input:hover{
   opacity: 1;
@@ -146,12 +151,16 @@
     background-color: rgb(35, 71, 71);
     cursor: pointer;
 }
-.dirName{
+.dirName,.search_dirName{
   padding: 2px;
   max-width: 70%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.search_dirName{
+  font-size: 1.2em;
 }
 .dirName::-webkit-scrollbar {
   display: none;
@@ -236,7 +245,10 @@
   gap: 10px;
 }
 .pinnedEntry button{
-  padding: 0;
+  padding: 2px;
+  border-radius: 10px;
+  border: none;
+  background-color: #ceb4b4;
 }
 .pinnedEntry button:hover{
   cursor: pointer;

@@ -334,6 +334,24 @@ async function copyFolderReq(path1, path2){
   }
 }
 
+//deletes a path
+async function deleteEntryReq(path){
+  try{
+    const response = await fetch(baseURL + "deleteEntry",{
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null
+  }
+}
 
 
 // utility functions
@@ -405,7 +423,8 @@ function getSegments(fullpath){
     result.sort((a,b)=>a.creation - b.creation)
     return result
   }
+
 export {
   joinPath, trimPath, getSegments, sortAlphanumeric, sortCreation, sortModified, formatDate,
   navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq, getEntryReq,
-  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq, createFolderReq, copyFolderReq }
+  addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq, createFolderReq, copyFolderReq, deleteEntryReq }
