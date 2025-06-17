@@ -19,7 +19,20 @@ function FileSystem(){
   const [lazyLoadMax, setLazyLoadMax] = useState(100);
   const lazyLoadMaxRef = useRef(100)
 
+
   const globalCursorPos = useRef({x:0,y:0})
+
+  
+  const shared = {
+    displayPath, setDisplayPath,
+    displayFiles, setDisplayFiles,
+    lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef,
+    pinned, setPinned,
+    showRecents, setShowRecents,
+    recents, setRecents,
+    changePath, updateRecents, openFile,
+    globalCursorPos
+  }
 
   //Always make cursor pos available 
   useEffect(()=>{
@@ -33,17 +46,6 @@ function FileSystem(){
       window.removeEventListener("mousemove", getCursorPos)
     }
   },[])
-
-  const shared = {
-    displayPath, setDisplayPath,
-    displayFiles, setDisplayFiles,
-    lazyLoadMax, setLazyLoadMax, lazyLoadMaxRef,
-    pinned, setPinned,
-    showRecents, setShowRecents,
-    recents, setRecents,
-    changePath, updateRecents, openFile,
-    globalCursorPos
-  }
 
   // Changes the main display path and gets files / folders attached to the changed path.
   async function changePath(newPath){
@@ -67,12 +69,12 @@ function FileSystem(){
     isLoadingRef.current = false
   }
   
-  // Updates most frequently accessed entries 
+  // Updates most frequently accessed entries (many short functions like this but they may be edited for advanced logic later)
   async function updateRecents(path) {
    const response = await updateRecentsReq(path)
   }
 
-  // opens file (async because I'll open room for custom error handling later)
+  // opens file 
   async function openFile(path) {
     const response = await openFileReq(path)
   }

@@ -1,10 +1,11 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
 import DeleteWarning from "./DeleteWarning"
 import {joinPath, getSegments, sortAlphanumeric, sortCreation, sortModified,formatDate,
-renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq, deleteEntryReq } from "../../backend/requests"
+renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq, deleteEntryReq, 
+trimPath} from "../../backend/requests"
 
 import renameIcon from "../assets/renameIcon.png" 
 import pinIcon from "../assets/pinIcon.png"
@@ -18,7 +19,7 @@ import previous from "../assets/previous.png"
 import alphanumeric from "../assets/alphanumeric.png"
 import creation from "../assets/creation.png"
 import modified from "../assets/modified.png"
-import emptyFolder from "../assets/createFolder.png"
+import emptyFolderIcon from "../assets/createFolder.png"
 
 
 function Filedisplay(){
@@ -41,31 +42,27 @@ function Filedisplay(){
   const [sortType, setSortType] = useState("alphanumeric")
 
   const copiedFolder = useRef(null)
-  const [canPaste, setCanPaste] = useState(true)
   const displayFilesRef = useRef(displayFiles)
 
   const [zoom, setZoom] = useState(0)
   const zoomRef = useRef(0)
   
   const [deletingID, setDeletingID] = useState(null)
-
-  useLayoutEffect(()=>{
-    if (dragLink.current){
-        const elemAsRect = dragLink.current.getBoundingClientRect();
-        dragLink.current.style.left = `${globalCursorPos.current.x - elemAsRect.width / 2}px`;
-        dragLink.current.style.top = `${globalCursorPos.current.y - elemAsRect.height / 2}px`;    
-      }
-  },[dragged])
  
-  //Gets files on mount
+
+
+  //on mount, navigate to initial path and set up event listeners for:
+  // 1) ctrl + c (to copy folders)
+  // 2) ctrl + v (to paste folders)
+  // 3) clicks (to unselect when clicking blank spaces)
   useEffect(()=>{
     changePath(displayPath)
 
     function watchForClicks(e){
       const cursor = getComputedStyle(e.target).cursor;
-
         if (cursor === "auto") {
           setSelected(null)
+          selectedRef.current = null
         }
     }
     function watchForCTRLC(e){
@@ -73,18 +70,33 @@ function Filedisplay(){
         copiedFolder.current = selectedRef.current
       }
     }
-
-
     function watchForCTRLV(e){
-      if (e.ctrlKey && e.key === 'v' && copiedFolder.current && canPaste){
-        setCanPaste(false)
-        setTimeout(()=>{setCanPaste(true)},1000)
+      if (e.ctrlKey && e.key === 'v' && copiedFolder.current){
         createCopy()
       }
     }
-    const maxZoom = 100
-    const minZoom = -50
+
+    document.addEventListener("click", watchForClicks)
+    window.addEventListener("keydown", watchForCTRLC)
+    window.addEventListener("keydown", watchForCTRLV)
+    return ()=>{
+
+      document.removeEventListener("click",watchForClicks)
+      window.removeEventListener("keydown",watchForCTRLC)
+      window.removeEventListener("keydown", watchForCTRLV)
+    }
+  },[])
+
+  // whenever showRecents changes, set up event listeners for main display again (showRecents is the only thing that breaks it)
+  // 1) user zooms in / out (change size of entry elements in main scrollable container)
+  // 2) scroll (for lazy loading, more files will load the further down the user scrolls in main scrollable container )
+  useEffect(()=>{
+    console.log("cooking")
+    const mainScrollableElem = mainScrollable.current
+
     function watchForZoom(e){
+      const maxZoom = 100
+      const minZoom = -50
       if (e.ctrlKey){
         e.preventDefault()
         zoomRef.current = (Math.max(minZoom, Math.min(zoomRef.current + e.deltaY,maxZoom)))
@@ -92,27 +104,11 @@ function Filedisplay(){
         const newFont = 20 + .08 * zoomRef.current
         const newHeight = 60 + .5 *zoomRef.current
         document.querySelectorAll(`.${styles.file_folder_bg}`).forEach(elem=>{
-        elem.style.fontSize = `${newFont}px`
-        elem.style.height = `${newHeight}px`
+            elem.style.fontSize = `${newFont}px`
+            elem.style.height = `${newHeight}px`
         })
       }
     }
-    
-    const mainScrollableElement = document.querySelector(`.${styles.entries}`)
-    mainScrollableElement.addEventListener("wheel", watchForZoom, {passive: false})
-    document.addEventListener("click", watchForClicks)
-    window.addEventListener("keydown", watchForCTRLC)
-    window.addEventListener("keydown", watchForCTRLV)
-    return ()=>{
-      mainScrollableElement.removeEventListener("wheel", watchForZoom, {passive: false})
-      document.removeEventListener("click",watchForClicks)
-      window.removeEventListener("keydown",watchForCTRLC)
-      window.removeEventListener("keydown", watchForCTRLV)
-    }
-  },[])
-
-  //set up scrolling event listener on main display for lazy loading 
-  useEffect(()=>{
     function uponScroll(){
       if (displayFiles.length > lazyLoadMaxRef.current){
         const maxScroll = mainScrollable.current.scrollHeight - mainScrollable.current.clientHeight
@@ -122,21 +118,23 @@ function Filedisplay(){
         }
       }
     }
-    mainScrollable.current && mainScrollable.current.addEventListener("scroll", uponScroll)
+    mainScrollableElem.addEventListener("scroll", uponScroll)
+    mainScrollableElem.addEventListener("wheel", watchForZoom, {passive: false})
+    return ()=>{
+          console.log("clean up")
 
-    return  ()=>{
-      mainScrollable.current && mainScrollable.current.removeEventListener("scroll", uponScroll)
+      mainScrollableElem.removeEventListener("scroll", uponScroll)
+      mainScrollableElem.removeEventListener("wheel", watchForZoom, {passive: false})
     }
-  },[displayPath])
+  },[showRecents])
 
+  // attach reference when state updates (used because state "displayFiles" won't work in event listeners)
   useEffect(()=>{
-    selectedRef.current = selected
-  },[selected])
-
-    useEffect(()=>{
     displayFilesRef.current = displayFiles
   },[displayFiles])
 
+
+  // Makes a copy of an entry & updates display with new value in its sorted position
   async function createCopy() {
     const response = await copyFolderReq(copiedFolder.current, joinPath(copiedFolder.current,".."))
     if (response != null){
@@ -145,7 +143,7 @@ function Filedisplay(){
     }
   }
 
-  // pins entry
+  // saves entry as pinned and updates display
   async function pinEntry(e, each){
     e.stopPropagation()
     const entryPath = each.path;
@@ -158,7 +156,7 @@ function Filedisplay(){
     }
   }
 
-  // unpins entry
+  // removes entry from pinned items in backend and updates display
   async function unpinEntry(e, each){
     e.stopPropagation()
     const entryPath = each.path
@@ -172,7 +170,7 @@ function Filedisplay(){
     }
   }
 
-  // hides entry
+  // saves entry as hidden and updates display
   async function hideEntry(e, each){ 
     e.stopPropagation()
     const entryPath = each.path
@@ -184,7 +182,7 @@ function Filedisplay(){
     }
   }
 
-  // unhides entry
+   // removes entry from hidden items in backend and updates display
   async function unhideEntry(e, each){
     e.stopPropagation()
     const entryPath = each.path
@@ -204,7 +202,7 @@ function Filedisplay(){
     setNewFileName(each.name) 
   }
 
-  // saves renamed entry 
+  // saves renamed entry and updates display with its new sorted position
   async function saveRename(e, each){
     e.stopPropagation()
     setIsRenaming(false);
@@ -218,33 +216,15 @@ function Filedisplay(){
     }
   } 
 
-  // moves file /folder from path 1 to path 2
+  // moves entry from path 1 to path 2
   async function moveFile(path1, path2) {
     const response = await moveFileReq(path1, path2)
     if (response != null){
-      if (path2 !== displayPath){
-            console.log(displayPath,path2)
-
         setDisplayFiles(displayFiles.filter(item => item.path !== path1))
-      }else{
-            console.log(path2)
-
-        console.log(path2)
-        changePath(path2)
-      }
-      
-    }
-  }
-  function sortedDisplay(files) {
-    if (sortType === "alphanumeric"){
-      return sortAlphanumeric(files)
-    }else if(sortType === "creation"){
-      return sortCreation(files)
-    }else{
-      return sortModified(files)
     }
   }
 
+  //Creates a folder entry, scrolls to top, and allows user to namme folder
   async function createFolder() {
     const response = await createFolderReq(displayPath)
     if (response != null){
@@ -256,26 +236,18 @@ function Filedisplay(){
     }
   }
 
-  // Select an entry. If selected, navigates to folder path if folder and opens file if file
-  function clickEntry(each){
-      if (selected != each.path){
-        setSelected(each.path)
-        setIsRenaming(false)
-
-        return
-      }
-      const newPath = each.path;
-      if (each.type == "folder"){
-        changePath(newPath);
-      }else{
-        openFile(newPath)
-      }
+  // Deletes an entry and updates display. Only happens after clicking "yes" in a prompt
+  async function deleteEntry(each){
+    const response = await deleteEntryReq(each.path)
+    if (response != null){
+      setDisplayFiles(displayFiles.filter(item=> item.path !== each.path))
+    }
   }
 
-  // Sets up the drag of an element by adding event listeners for when cursor is moved or mouse is released
+  // Sets up the drag of an element by adding event listeners for when cursor is moved or mouse is released. 
   function startDrag(event, data){
     const selectedElement = event.currentTarget
-    folderElementRef.current = null
+    folderElementRef.current = null 
     navigateTimer.current = null
 
     let done = false;
@@ -303,12 +275,12 @@ function Filedisplay(){
             return
           }
           
-          // get elements under cursor (the element we drag blocks them)
+          // get elements under cursor (the element we drag blocks them, so hide it first)
           dragLink.current.style.display = "none"
           const overElements = document.elementFromPoint(e.clientX, e.clientY)
           dragLink.current.style.display = ""
 
-          // Add css for folder elements underneath cursor
+          // Add css for folder elements underneath cursor & navigate to folders you drag over
           const folderElement = overElements?.closest("[data-folder]")
           if (folderElement !== folderElementRef.current){
             folderElementRef.current?.classList.remove(styles["folder-drop"])
@@ -334,7 +306,7 @@ function Filedisplay(){
           dragLink.current.style.left = `${e.clientX - elemAsRect.width / 2}px`;
           dragLink.current.style.top = `${e.clientY - elemAsRect.height / 2}px`;
           
-          // For convenient scrolling while dragging. Sets up an interval to avoid having to move cursor to scroll
+          // For convenient scrolling while dragging. Sets up an interval to avoid having to move cursor to scroll.
           const closestScrollable = overElements?.closest("[data-scrollable]")
           if (closestScrollable){
             const scrollableRect = closestScrollable.getBoundingClientRect();
@@ -384,31 +356,33 @@ function Filedisplay(){
     document.addEventListener("mouseup",dragStop)
   }
 
-  function formPathSegments(){
-    const segments = getSegments(displayPath)
-    const result = []
-    let tempPath = displayPath
-    for (let i = segments.length-1; i >= 0; i--){
-      result.unshift("\\")
-      result.unshift([segments[i], tempPath])
-      tempPath = joinPath(tempPath, "..")
-    }
-    return result
-  }
-
-  function handleDelete(each){
-    if (!deletingID){
-      setDeletingID(each)
+    // Will return the appropriate sorted list for the current sort mode
+  function sortedDisplay(items) {
+    if (sortType === "alphanumeric"){
+      return sortAlphanumeric(items)
+    }else if(sortType === "creation"){
+      return sortCreation(items)
+    }else{
+      return sortModified(items)
     }
   }
 
-  async function deleteEntry(each){
-    const response = await deleteEntryReq(each.path)
-    if (response != null){
-      setDisplayFiles(displayFiles.filter(item=> item.path !== each.path))
-    }
+  // Select an entry. If already selected, navigates to path (if folder) or opens file (if file)
+  function clickEntry(each){
+      if (selected != each.path){
+        setSelected(each.path)
+        selectedRef.current = each.path
+        setIsRenaming(false)
+        return
+      }
+      if (each.type == "folder"){
+        changePath(each.path);
+      }else{
+        openFile(each.path)
+      }
   }
 
+  // this early return's main difference is that it renders entries from "recents" and not "displayFiles".
   if (showRecents){
     return (
     <div className={styles.filedisplay} data-scrollable>
@@ -422,47 +396,52 @@ function Filedisplay(){
           Showing Recent Folders
         </section>
       </div>
-      {recents.map((each,i)=>{
-        return (
-        <div
-         key={each.path}
-        className={styles.file_folder_bg}
-         style={{opacity:each.hidden ? .4 : 1}}>
-            <section className={styles.entryIcon}>
-              <img src={each.type == "folder" ? folderIcon : fileIcon} />
-            </section>
-          {each.type == "folder"
-          ? 
-          <div 
-          onClick={()=>clickEntry(each)} 
-          onMouseDown={(e)=>{startDrag(e,each)}} 
-          className={`${styles.folder} ${dragged===each ? styles["folder-dragged"]: ""} ${selected === each.path ? styles.isSelected : ""}`}
-          data-path={each.path} data-folder
-          >
-            <section className={styles.dirName}>{each.path}</section>
-            <section className={styles.dirDate}>{each.name}</section>
+      <div 
+      className={styles.entries}     
+      ref={mainScrollable}
+      data-scrollable>
+        {recents.map((each,i)=>{
+          return (
+          <div
+          key={each.path}
+          className={styles.file_folder_bg}
+          style={{opacity:each.hidden ? .4 : 1}}>
+              <section className={styles.entryIcon}>
+                <img src={each.type == "folder" ? folderIcon : fileIcon} />
+              </section>
+            {each.type == "folder"
+            ? 
+            <div 
+            onClick={()=>clickEntry(each)} 
+            onMouseDown={(e)=>{startDrag(e,each)}} 
+            className={`${styles.folder} ${dragged===each ? styles["folder-dragged"]: ""} ${selected === each.path ? styles.isSelected : ""}`}
+            data-path={each.path} data-folder
+            >
+              <section className={styles.dirName}>{each.path}</section>
+              <section className={styles.dirDate}>{each.name}</section>
+            </div>
+            :
+            <div 
+            onClick={()=>clickEntry(each)} 
+            className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
+            data-path={each.path} data-file
+            >
+              <section className={styles.dirName}>{each.path}</section>
+              <section className={styles.dirDate}>{formatDate(each.creation)}</section>
+            </div>
+            }
           </div>
-          :
-          <div 
-          onClick={()=>clickEntry(each)} 
-          className={`${styles.file} ${selected === each.path ? styles.isSelected : ""}`}
-          data-path={each.path} data-file
-          >
-            <section className={styles.dirName}>{each.path}</section>
-            <section className={styles.dirDate}>{formatDate(each.creation)}</section>
-          </div>
-          }
-        </div>
-        )})}
+          )})}
+      </div>
     {dragged && <div ref={dragLink} className={styles.dragged}>{dragged.name}<br/>{dragged.path}</div>}
 
     </div>)
   }
 
   return(
-    <div
-    className={styles.filedisplay}>
+    <div className={styles.filedisplay}>
       {deletingID && <DeleteWarning setDeletingID={setDeletingID} deletingId={deletingID} deleteEntry={deleteEntry}/>}
+
       <div className={styles.dash}>
         <section className={styles.dashTop}>
           <section className={styles.dashContainer1}>
@@ -471,7 +450,7 @@ function Filedisplay(){
           <section className={styles.dashContainer2}>
             <button onClick={createFolder}>
               <span>Create Folder</span>
-              <img src={emptyFolder}/>     
+              <img src={emptyFolderIcon}/>     
             </button>
           </section>
           <section className={styles.dashContainer3}>
@@ -492,19 +471,16 @@ function Filedisplay(){
         
         </section>
         <section className={styles.dashBottom}> 
-          {formPathSegments().map((each, i)=>{
-            if (i % 2 !== 0){
-              return (<span key={i}>//</span>)
-            }else{
+          {getSegments(displayPath).map((each)=>{
+              const path = trimPath(displayPath, each);
               return (
               <span
-              key={i}
-              onClick={()=>changePath(each[1])}
+              key={each}
+              onClick={()=>changePath(path)}
               className={styles.parentSegment}
-              data-path={each[1]} data-folder>
-                {each[0]}
+              data-path={path} data-folder>
+                {`${each} // `}
               </span>)
-            }
           })}
         </section>
 
@@ -617,7 +593,7 @@ function Filedisplay(){
             </div>
             }
             <section className={styles.entryIcon}>
-              <img className={styles.deleteButton} src={trashIcon} onClick={()=>handleDelete(each)} />
+              <img className={styles.deleteButton} src={trashIcon} onClick={()=>{!deletingID && setDeletingID(each)}} />
             </section>
           </div>
         )})}
