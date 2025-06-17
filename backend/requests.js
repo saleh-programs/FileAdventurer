@@ -1,6 +1,8 @@
 
 const baseURL = "http://localhost:8000/"
 
+//comments for many may be obvious but are made for consistency
+
 //Save pinned entry in backend
 async function addPinnedReq(path) {
   try{
@@ -356,7 +358,7 @@ async function deleteEntryReq(path){
 
 // utility functions
 
-// Acts as os.path.join to add to a path
+// Acts as os.path.join in Python to add to a path (can also go to previous path by making ".." the second arg)
 function joinPath(fullpath, added){   
   if (fullpath === "C:\\" && added === ".."){
     return fullpath

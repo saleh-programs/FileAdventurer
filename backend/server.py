@@ -462,6 +462,8 @@ def getSearchResults(req: SearchReq):
       status_code=500
     )
 
+
+
 # recursive function that checks every directory in initial path for target. "Exclusions" are not explored.
 def findMatchingFiles(path, target, results):
   exclusions = {"__pycache__","node_modules","venv","anaconda3", "appdata"}
@@ -478,9 +480,6 @@ def findMatchingFiles(path, target, results):
       results.append(childPath)
     if (lowerCaseName not in exclusions) and (os.path.isdir(childPath)) and name[0] != "." :
       findMatchingFiles(childPath, target, results)
-
-
-
 
 # Retrieve a list of file / folder objests
 def getEntries(pathList):

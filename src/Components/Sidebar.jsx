@@ -18,6 +18,7 @@ function Sidebar(){
   const [stackFiles, setStackFiles] = useState([])
   const [stackPath, setStackPath] = useState("C:\\Users\\Saleh")
   const [stackParents, setStackParents] = useState([])
+  const [stackMode, setStackMode] = useState(true)
   const [isLoadingStack, setIsLoadingStack] = useState(false)
   const isLoadingStackRef = useRef(false)
 
@@ -28,11 +29,9 @@ function Sidebar(){
   const lastSearched = useRef(null)
   const searchLoadingRef = useRef(false)
 
-  const [refresh, setRefresh] = useState(false)
-  const [stackMode, setStackMode] = useState(true)
   const sidebarWidthRef = useRef(null)
-
   const [expanded, setExpanded] = useState(new Set())
+
   const [frameIndex, setFrameIndex] = useState(0)
   const frameIndexRef = useRef(0)
   const willowRef = useRef(null)
@@ -42,14 +41,14 @@ function Sidebar(){
     direction: 1
   })
 
-  // get pinned entries and Tree entries on mount
+  // Get pinned entries and Tree entries on mount
   useEffect(()=>{
     getPinnedItems()
     changeStackPath(stackPath)
   },[])
 
 
-  // gets pinned entries
+  // gets pinned entries (that's it i guess)
   async function getPinnedItems() {
     const response = await getPinnedReq()
     if (response != null){ 
@@ -57,7 +56,7 @@ function Sidebar(){
     }
   }
 
-  //go to downloads folder
+  //go to downloads folder in the main display
   async function goToDownloads() {
     const response = await getDownloadsFolderReq()
     if (response != null){
@@ -65,15 +64,23 @@ function Sidebar(){
     }
   }
 
-  //go to documents folder
+  //go to documents folder in the main display
   async function goToDocuments() {
     const response = await getDocumentsFolderReq()
     if (response != null){
       changePath(response)
     }
   }
+  // Show recents screen and get list of file/folders objects that are most frequently accessed
+  async function goToRecents() {
+    const response = await getRecentsReq()
+    if (response != null){
+      setRecents(response)
+      setShowRecents(true)
+    }
+  }
 
-  // Collapses all children of closed folder
+  // Collapses all children of closed folder (recursively removes them from the "expanded" set)
   function closeChildren(item, expandedSet){
     expandedSet.delete(item.path)
     for (let i=0; i < item.children.length; i++){
@@ -83,7 +90,7 @@ function Sidebar(){
     }
   }
 
-  // Get all entries in folder and add those entries as children of that folder
+  // If entry is expanded, this will collapse it and all its children. Otherwise, it was add its children. Happens in "Tree Mode"
   async function toggleChildren(item) {
     if (expanded.has(item.path)){
       const newExpandedSet = new Set(expanded)
@@ -102,9 +109,37 @@ function Sidebar(){
         })
       }
     }
-    setRefresh(!refresh)
   }
-
+  //Recursively render all entries in "Tree Mode". Basic idea is to add more spacing from the left as the depth increases (deeply nested children have much spacing)
+  function renderFiles(each, depth=0){
+    return (
+      <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:depth===0 ? "0px" :`20px`}}>
+        { 
+        each.type == "folder" 
+        ? 
+        <div className={styles.folderWrapper}>
+          <span className={styles.toggleOpen}><img src={expanded.has(each.path) ? opened: closed}/></span>
+          <div
+          onClick={()=>{toggleChildren(each)}}
+          className={styles.folder}
+          data-path={each.path} data-folder>
+            <section title={each.name} className={styles.dirName}>{each.name}</section>
+            <button className={styles.openDir} onClick={(e)=>{e.stopPropagation(); changePath(each.path);}}>Open</button>
+          </div> 
+        </div>
+        :
+        <div
+        onClick={()=>openFile(each.path)}
+        className={styles.file}
+        data-path={each.path} data-file>
+          <section title={each.name} className={styles.dirName}>{each.name}</section>
+        </div>
+        }
+        {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
+      </div>
+    )     
+  }
+  // Begin Willow animation. Willow is an asset I love to resuse from when I made my first game. 
   function startAnimation(){
     let lastTime = 0
     function moveWillow(time){
@@ -143,7 +178,19 @@ function Sidebar(){
     requestAnimationFrame(moveWillow)
   }
 
-  // Show search screen and get list of file/folder objects with matching target substring
+  // removes entry from pinned items in backend and updates display
+  async function unpinEntry(e, each){
+    e.stopPropagation()
+    const response = await removePinnedReq(each.path)
+    if (response != null){
+      setPinned(prev=>prev.filter(item=> item.path !== each.path));
+      setDisplayFiles(displayFiles.map(item=>{
+        return item.path === each.path ? {...item, pinned: false} : item
+      }))
+    }
+  }
+
+    // Show search screen and get list of entries with matching target substring
   async function startSearch() {
     if (searchTarget === "" || searchTarget === lastSearched.current){
       return
@@ -169,6 +216,7 @@ function Sidebar(){
     }
   }
 
+  // Clean up all values used for searching and exit the search screen/animation
   async function endSearch() {
     lastSearched.current = null
     setShowSearch(false);
@@ -177,43 +225,22 @@ function Sidebar(){
     setSearchResults([])
   }
 
-  // Show recents screen and get list of file/folders objects that are most frequently accessed
-  async function viewRecents() {
-    const response = await getRecentsReq()
-    if (response != null){
-      setRecents(response)
-    }
-    setShowRecents(true)
+  //Returns search result with the located substring highlighted (and path truncated as defined by maxLength)
+  function getHighlightedPortion(path){
+    const target = lastSearched.current.toLowerCase()
+    const newPath = path.toLowerCase()
+    const targetIdx = newPath.indexOf(target)
+    
+    const maxLength = 50
+    const startingStem = targetIdx+1 > maxLength ? `...${path.slice((targetIdx+1)-maxLength,targetIdx)}`: path.slice(0, targetIdx)
+    return <span>
+      {startingStem}
+      <strong style={{backgroundColor:"yellow",opacity:'.6'}}>{path.slice(targetIdx, targetIdx + target.length)}</strong>
+      {path.slice(targetIdx + target.length, path.length)}</span>
   }
 
-  function renderFiles(each, depth=0){
-    return (
-      <div key={each.path} className={styles.file_folder_bg} style={{marginLeft:depth===0 ? "0px" :`20px`}}>
-        { 
-        each.type == "folder" 
-        ? 
-        <div className={styles.folderWrapper}>
-          <span className={styles.toggleOpen}><img src={expanded.has(each.path) ? opened: closed}/></span>
-          <div
-          onClick={()=>{toggleChildren(each)}}
-          className={styles.folder}
-          data-path={each.path} data-folder>
-            <section title={each.name} className={styles.dirName}>{each.name}</section>
-            <button className={styles.openDir} onClick={(e)=>{e.stopPropagation(); changePath(each.path);}}>Open</button>
-          </div> 
-        </div>
-        :
-        <div
-        onClick={()=>openFile(each.path)}
-        className={styles.file}
-        data-path={each.path} data-file>
-          <section title={each.name} className={styles.dirName}>{each.name}</section>
-        </div>
-        }
-        {each.children.length > 0 && each.children.map(item=>{return renderFiles(item,depth+1)})}
-      </div>
-    )     
-  }
+    //Sets up event listeners for moving sidebar when the handle is pressed. Has a defined right and left boundary,
+  //as well as a collapse boundary to make sidebar disappear.
   function dragSidebar(){
     let done = false;
     let startedDragging = false
@@ -264,6 +291,7 @@ function Sidebar(){
     document.addEventListener("mouseup",dragStop)
   }
 
+    //Sidebar equivalent of "changePath". Changes the stack path if it isn't loading and sets appropriate suppporting values.
   async function changeStackPath(newPath){
     if (isLoadingStackRef.current || isLoadingStack) return
 
@@ -283,20 +311,8 @@ function Sidebar(){
     isLoadingStackRef.current = false
   }
 
-    // unpins entry
-  async function unpinEntry(e, each){
-    e.stopPropagation()
-    const entryPath = each.path
-    const response = await removePinnedReq(entryPath)
-    if (response != null){
-      setPinned(prev=>prev.filter(item=> item.path !== entryPath));
-      setDisplayFiles(displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, pinned: false} : item
-      }))
-    }
-  }
 
-  // Select an entry. If selected, navigates to folder path if folder and opens file if file (for pinned items)
+    // Navigates to path (if folder) or opens file (if file)
   function clickEntry(each){
       if (each.type == "folder"){
         changePath(each.path);
@@ -305,18 +321,6 @@ function Sidebar(){
       }
   }
 
-  function getHighlightedPortion(path){
-    const target = lastSearched.current.toLowerCase()
-    const newPath = path.toLowerCase()
-    const targetIdx = newPath.indexOf(target)
-    
-    const maxLength = 50
-    const startingStem = targetIdx+1 > maxLength ? `...${path.slice((targetIdx+1)-maxLength,targetIdx)}`: path.slice(0, targetIdx)
-    return <span>
-      {startingStem}
-      <strong style={{backgroundColor:"yellow",opacity:'.6'}}>{path.slice(targetIdx, targetIdx + target.length)}</strong>
-      {path.slice(targetIdx + target.length, path.length)}</span>
-  }
   return(
     <div className={styles.sidebarWrapper}>
       <div ref={sidebarWidthRef} className={styles.sidebar}>
@@ -363,7 +367,7 @@ function Sidebar(){
               }
             </div>
             }
-            </>
+          </>
         :
         <div className={styles.minitree}  data-scrollable>
           <div className={styles.treeHeader}>
@@ -376,7 +380,7 @@ function Sidebar(){
                 </button>
               <button className={styles.treeMode} onClick={()=>setStackMode(false)}>
                 <img src={treeIcon} />
-                Tree Mode
+                  Tree Mode
                 </button>
             </section>
           </div>
@@ -431,7 +435,7 @@ function Sidebar(){
         <div className={styles.commonFolders}>
           <section onClick={goToDownloads}> Downloads</section>
           <section onClick={goToDocuments}> Documents</section>
-          <section onClick={viewRecents}>Recents</section>
+          <section onClick={goToRecents}>Recents</section>
         </div>
         <div className={styles.pinnedSection} data-scrollable>
           <h2 className={styles.pinnedHeader}>Pinned Folders<hr /></h2>

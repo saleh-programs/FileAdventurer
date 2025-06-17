@@ -146,12 +146,11 @@ function Filedisplay(){
   // saves entry as pinned and updates display
   async function pinEntry(e, each){
     e.stopPropagation()
-    const entryPath = each.path;
-    const response = await addPinnedReq(entryPath);
+    const response = await addPinnedReq(each.path);
     if (response != null){
       setPinned(prev=>[...prev, each]);
       setDisplayFiles(displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, pinned: true} : item
+        return item.path === each.path ? {...item, pinned: true} : item
     }))
     }
   }
@@ -159,13 +158,11 @@ function Filedisplay(){
   // removes entry from pinned items in backend and updates display
   async function unpinEntry(e, each){
     e.stopPropagation()
-    const entryPath = each.path
-    const response = await removePinnedReq(entryPath)
+    const response = await removePinnedReq(each.path)
     if (response != null){
-
-      setPinned(prev=>prev.filter(item=> item.path !== entryPath));
+      setPinned(prev=>prev.filter(item=> item.path !== each.path));
       setDisplayFiles(displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, pinned: false} : item
+        return item.path === each.path ? {...item, pinned: false} : item
       }))
     }
   }
@@ -173,11 +170,10 @@ function Filedisplay(){
   // saves entry as hidden and updates display
   async function hideEntry(e, each){ 
     e.stopPropagation()
-    const entryPath = each.path
-    const response = await addHiddenReq(entryPath)
+    const response = await addHiddenReq(each.path)
     if (response != null){
       setDisplayFiles(displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, hidden: true} : item
+        return item.path === each.path ? {...item, hidden: true} : item
       }))
     }
   }
@@ -185,11 +181,10 @@ function Filedisplay(){
    // removes entry from hidden items in backend and updates display
   async function unhideEntry(e, each){
     e.stopPropagation()
-    const entryPath = each.path
-    const response = await removeHiddenReq(entryPath)
+    const response = await removeHiddenReq(each.path)
     if (response != null){
       setDisplayFiles(displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, hidden: false} : item
+        return item.path === each.path ? {...item, hidden: false} : item
       }))
     }
   }
@@ -206,11 +201,10 @@ function Filedisplay(){
   async function saveRename(e, each){
     e.stopPropagation()
     setIsRenaming(false);
-    const entryPath = each.path
-    const response = await renameFileReq(entryPath, newFileName);
+    const response = await renameFileReq(each.path, newFileName);
     if (response != null){
       const newFiles = displayFiles.map(item=>{
-        return item.path === entryPath ? {...item, name: newFileName} : item
+        return item.path === each.path ? {...item, name: newFileName} : item
       })
       setDisplayFiles(sortedDisplay(newFiles));
     }
