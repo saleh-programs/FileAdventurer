@@ -4,7 +4,7 @@ import ThemeContext from "../assets/ThemeContext"
 import Filedisplay from "./Filedisplay"
 import Sidebar from "./Sidebar"
 
-import { navigateToReq, openFileReq, updateRecentsReq } from "../../backend/requests"
+import { navigateToReq, openFileReq, updateRecentsReq, sortedDisplay } from "../../backend/requests"
 
 function FileSystem(){
   const [displayPath, setDisplayPath] = useState("C:\\")
@@ -16,13 +16,15 @@ function FileSystem(){
   const [showRecents, setShowRecents] = useState(false)
   const [recents, setRecents] = useState([])
 
-  const [lazyLoadMax, setLazyLoadMax] = useState(100);
-  const lazyLoadMaxRef = useRef(100)
+  const [lazyLoadMax, setLazyLoadMax] = useState(50);
+  const lazyLoadMaxRef = useRef(50)
 
 
   const globalCursorPos = useRef({x:0,y:0})
-
+  const initialLoad = useRef(null)
   
+  const [reload, setReload] = useState(0)
+
   const shared = {
     displayPath, setDisplayPath,
     displayFiles, setDisplayFiles,
@@ -45,6 +47,20 @@ function FileSystem(){
     return ()=>{
       window.removeEventListener("mousemove", getCursorPos)
     }
+  },[])
+
+  //check for entries until server starts
+  useEffect(()=>{
+    initialLoad.current = setInterval(async () => {
+      const response = await navigateToReq(displayPath)
+      if (response !== null){
+        //Shared by child components, everything will rerender
+        clearInterval(initialLoad.current)
+        setReload(Math.random())
+        
+      }
+    }, 1000);
+    
   },[])
 
   // Changes the main display path and gets files / folders attached to the changed path.
@@ -82,8 +98,8 @@ function FileSystem(){
   return(
   <>
     <ThemeContext.Provider value={shared}>
-      <Sidebar/>
-      <Filedisplay/>
+      <Sidebar key={reload}/>
+      <Filedisplay key={reload+1}/>
     </ThemeContext.Provider> 
   </>
   )

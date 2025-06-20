@@ -3,7 +3,7 @@ import styles from "../../styles/Components/Filedisplay.module.css"
 import ThemeContext from "../assets/ThemeContext"
 
 import DeleteWarning from "./DeleteWarning"
-import {joinPath, getSegments, sortAlphanumeric, sortCreation, sortModified,formatDate,
+import {joinPath, getSegments, sortAlphanumeric, sortCreation, sortModified,formatDate, sortedDisplay,
 renameFileReq, moveFileReq, addPinnedReq,addHiddenReq, removePinnedReq, removeHiddenReq,createFolderReq, copyFolderReq, deleteEntryReq, 
 trimPath} from "../../backend/requests"
 
@@ -48,7 +48,6 @@ function Filedisplay(){
   const zoomRef = useRef(0)
   
   const [deletingID, setDeletingID] = useState(null)
- 
 
 
   //on mount, navigate to initial path and set up event listeners for:
@@ -136,7 +135,7 @@ function Filedisplay(){
     const response = await copyFolderReq(copiedFolder.current, joinPath(copiedFolder.current,".."))
     if (response != null){
       const newFiles = [response,...displayFilesRef.current]
-      setDisplayFiles(sortedDisplay(newFiles))
+      setDisplayFiles(sortedDisplay(newFiles), sortType)
     }
   }
 
@@ -201,9 +200,9 @@ function Filedisplay(){
     const response = await renameFileReq(each.path, newFileName);
     if (response != null){
       const newFiles = displayFiles.map(item=>{
-        return item.path === each.path ? {...item, name: newFileName} : item
+        return item.path === each.path ? {...item, name: newFileName, path: response} : item
       })
-      setDisplayFiles(sortedDisplay(newFiles));
+      setDisplayFiles(sortedDisplay(newFiles), sortType);
     }
   } 
 
@@ -345,17 +344,6 @@ function Filedisplay(){
 
     document.addEventListener("mousemove", dragMove)
     document.addEventListener("mouseup",dragStop)
-  }
-
-    // Will return the appropriate sorted list for the current sort mode
-  function sortedDisplay(items) {
-    if (sortType === "alphanumeric"){
-      return sortAlphanumeric(items)
-    }else if(sortType === "creation"){
-      return sortCreation(items)
-    }else{
-      return sortModified(items)
-    }
   }
 
   // Select an entry. If already selected, navigates to path (if folder) or opens file (if file)

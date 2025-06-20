@@ -199,7 +199,7 @@ async function renameFileReq(path,target){
     if (!data.success){
       throw new Error(data.message || "Req Failed")
     }
-    return data
+    return data.data
   }catch(err){
     console.error(err)
     return null;
@@ -355,6 +355,42 @@ async function deleteEntryReq(path){
   }
 }
 
+//gets the default path the user set
+async function getDefaultPathReq() {
+  try{
+    const response = await fetch(baseURL + "getDefaultPath",{
+      method: 'GET',
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data.data
+  }catch(err){
+    console.error(err)
+    return null
+  }
+}
+
+//sets the default path the user sets for minitree in sidebar
+async function setDefaultPathReq(path) {
+  try{
+    const response = await fetch(baseURL + "setDefaultPath",{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({"path":path})
+    });
+    const data = await response.json()
+    if (!data.success){
+      throw new Error(data.message || "Req Failed")
+    }
+    return data
+  }catch(err){
+    console.error(err)
+    return null
+  }
+}
+
 
 // utility functions
 
@@ -426,7 +462,18 @@ function getSegments(fullpath){
     return result
   }
 
+  // Will return the appropriate sorted list for the current sort mode
+  function sortedDisplay(items, sortType) {
+    if (sortType === "alphanumeric"){
+      return sortAlphanumeric(items)
+    }else if(sortType === "creation"){
+      return sortCreation(items)
+    }else{
+      return sortModified(items)
+    }
+  }
+
 export {
-  joinPath, trimPath, getSegments, sortAlphanumeric, sortCreation, sortModified, formatDate,
-  navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq, getEntryReq,
+  joinPath, trimPath, getSegments, sortAlphanumeric, sortCreation, sortModified, formatDate, sortedDisplay,
+  navigateToReq, openFileReq,renameFileReq, moveFileReq, getDownloadsFolderReq,getDocumentsFolderReq, getSearchResultsReq, getEntryReq, getDefaultPathReq, setDefaultPathReq,
   addPinnedReq, addHiddenReq, removePinnedReq, removeHiddenReq, getPinnedReq, getHiddenReq, updateRecentsReq, getRecentsReq, createFolderReq, copyFolderReq, deleteEntryReq }

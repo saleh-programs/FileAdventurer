@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import styles from "../../styles/Components/Sidebar.module.css"
-import {trimPath, getSegments, navigateToReq, getSearchResultsReq, getPinnedReq, getRecentsReq, getDownloadsFolderReq, removePinnedReq, getDocumentsFolderReq} from "../../backend/requests";
+import {trimPath, getSegments, navigateToReq, getSearchResultsReq, getPinnedReq, getRecentsReq, getDownloadsFolderReq, removePinnedReq, getDocumentsFolderReq, getDefaultPathReq, setDefaultPathReq} from "../../backend/requests";
 import ThemeContext from "../assets/ThemeContext";
 
 import treeIcon from "../assets/treeIcon.png"
@@ -16,7 +16,8 @@ function Sidebar(){
   const {setRecents, setShowRecents, changePath, openFile, pinned, setPinned,displayFiles, setDisplayFiles} = useContext(ThemeContext)
 
   const [stackFiles, setStackFiles] = useState([])
-  const [stackPath, setStackPath] = useState("C:\\Users\\Saleh")
+  const [stackPath, setStackPath] = useState("C:\\")
+  const [defaultPath, setDefaultPath] = useState("C:\\")
   const [stackParents, setStackParents] = useState([])
   const [stackMode, setStackMode] = useState(true)
   const [isLoadingStack, setIsLoadingStack] = useState(false)
@@ -40,11 +41,10 @@ function Sidebar(){
     framerate: 9,
     direction: 1
   })
-
-  // Get pinned entries and Tree entries on mount
+  // Get pinned entries, default path, and Tree entries on mount
   useEffect(()=>{
     getPinnedItems()
-    changeStackPath(stackPath)
+    getDefaultPath()
   },[])
 
 
@@ -56,6 +56,17 @@ function Sidebar(){
     }
   }
 
+  //gets the default path the user set previously
+  async function getDefaultPath() {
+    const response = await getDefaultPathReq()
+    if (response != null){
+      setDefaultPath(response)
+      changeStackPath(response)
+    }else{
+      changeStackPath(stackPath)
+    }
+  }
+  
   //go to downloads folder in the main display
   async function goToDownloads() {
     const response = await getDownloadsFolderReq()
@@ -370,6 +381,9 @@ function Sidebar(){
           </>
         :
         <div className={styles.minitree}  data-scrollable>
+          <section className={styles.defaultpath}>Default Path: <strong>{defaultPath}</strong>
+          <button onClick={async()=>{setDefaultPath(stackPath);setDefaultPathReq(stackPath)}}>Set as Current</button></section>
+
           <div className={styles.treeHeader}>
             <section className={styles.path}>Inside {stackPath}</section>
 
