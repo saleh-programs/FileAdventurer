@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
@@ -22,18 +23,21 @@ CREATE TABLE IF NOT EXISTS recents(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL)
 ''')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS defaultPath(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL)
+''')
 # cursor.execute("DROP TABLE recents")
 conn.close()
 
 app = FastAPI()
-origins = [
-    "http://localhost:5173"
-]
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -87,6 +91,50 @@ def updateRecents(req: JustPath):
       content = {"success": False, "message": "Recents update failed"},
       status_code = 500
     )
+
+#Get the default path the user set
+@app.get("/getDefaultPath")
+def getDefaultPath():
+  try: 
+    with AccessDB("FileSystemDatabase.db") as conn:
+      cursor = conn.cursor()
+
+      cursor.execute("SELECT * FROM defaultPath")
+      result = cursor.fetchone()[1]
+
+    return JSONResponse(
+      content={"data":result, "success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Getting default path failed"},
+      status_code=500,
+    )
+#sets the default path in the minitree (in Sidebar)
+@app.post("/setDefaultPath")
+def setDefaultPath(req: JustPath):
+  try: 
+    with AccessDB("FileSystemDatabase.db") as conn:
+      cursor = conn.cursor()
+
+      cursor.execute("""
+      INSERT INTO defaultPath (id, name)
+      VALUES (?, ?)
+      ON CONFLICT(id) DO UPDATE SET name=excluded.name
+      """, (1, req.path))
+
+
+    return JSONResponse(
+      content={"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "setting default path failed"},
+      status_code=500,
+    )
+
 
 #Retrieves list of paths in order from most to least accessed
 @app.get("/getRecents")
@@ -172,6 +220,7 @@ def getPinned():
 # Add a hidden folder to preferences TABLE
 @app.post("/addHidden")
 def addHidden(req: JustPath):
+  print(req.path)
   try:
     with AccessDB("FileSystemDatabase.db") as conn:
       cursor = conn.cursor()
@@ -266,7 +315,7 @@ def rename(req: RenameReq):
     fileToRenamePath = os.path.join(os.path.dirname(req.path),req.target)
     os.rename(req.path, fileToRenamePath)
     return JSONResponse(
-      content={"success":True},
+      content={"data":fileToRenamePath,"success":True},
       status_code=200
     )
   except Exception as e:
@@ -509,3 +558,6 @@ def getEntries(pathList):
         "children": []
         })
     return results
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_config=None)

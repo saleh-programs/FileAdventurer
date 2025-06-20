@@ -91,7 +91,6 @@ function Filedisplay(){
   // 1) user zooms in / out (change size of entry elements in main scrollable container)
   // 2) scroll (for lazy loading, more files will load the further down the user scrolls in main scrollable container )
   useEffect(()=>{
-    console.log("cooking")
     const mainScrollableElem = mainScrollable.current
 
     function watchForZoom(e){
@@ -121,8 +120,6 @@ function Filedisplay(){
     mainScrollableElem.addEventListener("scroll", uponScroll)
     mainScrollableElem.addEventListener("wheel", watchForZoom, {passive: false})
     return ()=>{
-          console.log("clean up")
-
       mainScrollableElem.removeEventListener("scroll", uponScroll)
       mainScrollableElem.removeEventListener("wheel", watchForZoom, {passive: false})
     }
