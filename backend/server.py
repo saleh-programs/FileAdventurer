@@ -220,7 +220,6 @@ def getPinned():
 # Add a hidden folder to preferences TABLE
 @app.post("/addHidden")
 def addHidden(req: JustPath):
-  print(req.path)
   try:
     with AccessDB("FileSystemDatabase.db") as conn:
       cursor = conn.cursor()
@@ -438,39 +437,6 @@ def copyFolder(req: CopyReq):
       status_code=500
     )
 
-
-# Retrieve a specific file/folder object
-@app.post("/getEntry")
-def getEntry(req: JustPath):
-  try:
-    with AccessDB("FileSystemDatabase.db") as conn:
-      cursor = conn.cursor()
-      fileinfo =  os.lstat(req.path)
-
-      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"pin"))
-      isPinned = cursor.fetchone() is not None
-      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"hide"))
-      isHidden = cursor.fetchone() is not None
-
-      entry = {
-        "name": os.path.basename(req.path),
-        "type": "folder" if os.path.isdir(req.path) else "file",
-        "creation": fileinfo.st_ctime,
-        "pinned": isPinned,
-        "hidden": isHidden,
-        "path": req.path,
-        "children": []
-        }
-    return JSONResponse(
-      content={"data": entry,"success":True},
-      status_code=200
-    )
-  except Exception as e:
-    return JSONResponse(
-      content={"success":False, "message": "Failed to retrieve file / folder object"},
-      status_code=500
-    )
-
 #deletes a path
 @app.delete("/deleteEntry")
 def deleteEntry(req: JustPath):
@@ -511,35 +477,66 @@ def getSearchResults(req: SearchReq):
       status_code=500
     )
 
-
-
 # recursive function that checks every directory in initial path for target. "Exclusions" are not explored.
 def findMatchingFiles(path, target, results):
-  exclusions = {"__pycache__","node_modules","venv","anaconda3", "appdata"}
+  exclusions = {"__pycache__","node_modules","venv","anaconda3", "windows","$","adobetemp","sadplog", "appdata"}
   try:
     entries = os.listdir(path)
   except PermissionError:
     return
-  
   for name in entries:
     childPath = os.path.join(path, name)
     lowerCaseName = name.lower()
-    
     if target in lowerCaseName:
       results.append(childPath)
     if (lowerCaseName not in exclusions) and (os.path.isdir(childPath)) and name[0] != "." :
       findMatchingFiles(childPath, target, results)
 
+# Retrieve a specific file/folder object
+@app.post("/getEntry")
+def getEntry(req: JustPath):
+  try:
+    with AccessDB("FileSystemDatabase.db") as conn:
+      cursor = conn.cursor()
+      fileinfo =  os.lstat(req.path)
+
+      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"pin"))
+      isPinned = cursor.fetchone() is not None
+      cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(req.path,"hide"))
+      isHidden = cursor.fetchone() is not None
+
+      entry = {
+        "name": os.path.basename(req.path),
+        "type": "folder" if os.path.isdir(req.path) else "file",
+        "creation": fileinfo.st_ctime,
+        "pinned": isPinned,
+        "hidden": isHidden,
+        "path": req.path,
+        "children": []
+        }
+    return JSONResponse(
+      content={"data": entry,"success":True},
+      status_code=200
+    )
+  except Exception as e:
+    return JSONResponse(
+      content={"success":False, "message": "Failed to retrieve file / folder object"},
+      status_code=500
+    )
+
+
 # Retrieve a list of file / folder objests
 def getEntries(pathList):
   with AccessDB("FileSystemDatabase.db") as conn:
     cursor = conn.cursor()
+    accepted = {"AppData"}
     results = []
     for path in pathList:
-      fileinfo =  os.lstat(path)
+      name = os.path.basename(path)
 
+      fileinfo =  os.lstat(path)
       attributes = fileinfo.st_file_attributes
-      if attributes & (stat.FILE_ATTRIBUTE_HIDDEN | stat.FILE_ATTRIBUTE_SYSTEM | stat.FILE_ATTRIBUTE_REPARSE_POINT):
+      if (attributes & (stat.FILE_ATTRIBUTE_HIDDEN|stat.FILE_ATTRIBUTE_SYSTEM|stat.FILE_ATTRIBUTE_REPARSE_POINT)) and (name not in accepted):
         continue
 
       cursor.execute('''SELECT 1 FROM preferences WHERE name = ? and type = ?''',(path,"pin"))
@@ -548,7 +545,7 @@ def getEntries(pathList):
       isHidden = cursor.fetchone() is not None
 
       results.append({
-        "name": os.path.basename(path),
+        "name": name,
         "type": "folder" if os.path.isdir(path) else "file",
         "creation": fileinfo.st_ctime,
         "modified":fileinfo.st_mtime,

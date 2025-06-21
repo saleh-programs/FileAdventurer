@@ -157,7 +157,6 @@ function Sidebar(){
       if (!searchLoadingRef.current){
         return
       }
-  
       const delta = (time - lastTime) / 1000
       lastTime = time
       //animate willow
@@ -232,6 +231,7 @@ function Sidebar(){
     lastSearched.current = null
     setShowSearch(false);
     setSearchLoading(false)
+    searchLoadingRef.current = false
     setSearchTarget("")
     setSearchResults([])
   }

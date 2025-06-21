@@ -91,7 +91,6 @@ function Filedisplay(){
   // 2) scroll (for lazy loading, more files will load the further down the user scrolls in main scrollable container )
   useEffect(()=>{
     const mainScrollableElem = mainScrollable.current
-
     function watchForZoom(e){
       const maxZoom = 100
       const minZoom = -50
@@ -108,8 +107,9 @@ function Filedisplay(){
       }
     }
     function uponScroll(){
-      if (displayFiles.length > lazyLoadMaxRef.current){
+      if (displayFilesRef.current.length > lazyLoadMaxRef.current){
         const maxScroll = mainScrollable.current.scrollHeight - mainScrollable.current.clientHeight
+
         if (mainScrollable.current.scrollTop > maxScroll - 200 ){
           lazyLoadMaxRef.current = lazyLoadMaxRef.current + 200
           setLazyLoadMax(lazyLoadMaxRef.current)
@@ -127,6 +127,10 @@ function Filedisplay(){
   // attach reference when state updates (used because state "displayFiles" won't work in event listeners)
   useEffect(()=>{
     displayFilesRef.current = displayFiles
+    if (mainScrollable.current){
+      mainScrollable.current.scrollTop = 0
+    }
+    
   },[displayFiles])
 
 
@@ -237,6 +241,9 @@ function Filedisplay(){
   // Sets up the drag of an element by adding event listeners for when cursor is moved or mouse is released. 
   function startDrag(event, data){
     const selectedElement = event.currentTarget
+    if (selectedRef.current != selectedElement.dataset.path){
+      return
+    }
     folderElementRef.current = null 
     navigateTimer.current = null
 
@@ -493,11 +500,9 @@ function Filedisplay(){
               { isRenaming && renameID === each.path 
               ?
               <section className={styles.dirName}>
-                <input className={styles.rename} value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()}  type="text" />
-                <section className={styles.renameButtons}>
-                  <button onClick={(e)=>{saveRename(e, each);}}>Save</button>
-                  <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
-                </section>
+                <input value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()}  type="text" onMouseDown={(e)=>e.stopPropagation()}/>
+                <button onClick={(e)=>{saveRename(e, each);}}>Save</button>
+                <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
               </section>
               :
               <section className={styles.dirName}>{each.name}</section>
@@ -537,7 +542,7 @@ function Filedisplay(){
               { isRenaming && renameID === each.path 
               ?
               <section className={styles.dirName}>
-                <input value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()} type="text" />
+                <input value={newFileName} onChange={(e)=>setNewFileName(e.target.value)} onClick={(e)=>e.stopPropagation()} type="text" onMouseDown={(e)=>e.stopPropagation()}/>
                 <button onClick={(e)=>{saveRename(e, each)}}>Save</button>
                 <button onClick={(e)=>{e.stopPropagation();setIsRenaming(false);}}>Exit</button>
               </section>

@@ -141,16 +141,13 @@
   padding: 10px;
 }
 
-.rename{
-  font-size: 1.2rem;
-}
-.renameButtons button{
-  padding: 5px;
+.dirName button{
   margin-right: 10px;
+  &:hover{
+    cursor: pointer;
+  }
 }
-.renameButtons button:hover{
-  cursor: pointer;
-}
+
 .back:hover{
   background-color: antiquewhite;
   cursor: pointer;
@@ -223,9 +220,13 @@
   width: 200px;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis;}
+.dirName button{
+  margin-inline: 5px;
+  &:hover{
+    cursor: pointer;
+  }
 }
-
 .dirNameInp{
   font-size: 1.2rem;
   flex: 2;
